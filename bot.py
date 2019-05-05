@@ -16,6 +16,7 @@
 
 import logging
 import os
+import random
 from io import BytesIO
 from collections import deque
 from time import sleep
@@ -57,7 +58,7 @@ def get_image():
 
 def start(bot, update):
     send_random_quote(bot, update)
-    bot.send_message(chat_id=update.message.chat_id, text='Send /inspire for more inspiration :)')
+    bot.send_message(chat_id=update.message.chat_id, text='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
 def send_random_quote(bot, update):
     bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
@@ -71,8 +72,7 @@ def send_random_quote(bot, update):
 def inlinequery(bot, update):
     LOGGER.debug('Inline query')
     results = []
-    for _ in range(10):
-        u = get_image_url()
+    for u in random.sample(url_pool, k=16):
         results.append(InlineQueryResultPhoto(
             id=u,
             photo_url=u,
@@ -91,7 +91,7 @@ def add_quotes(count=300):
 def add_quotes_job(bot, update):
     add_quotes(count=300)
 
-add_quotes(count=10)
+add_quotes(count=16)
 
 queue = updater.job_queue
 queue.run_repeating(add_quotes_job, interval=600, first=0)
