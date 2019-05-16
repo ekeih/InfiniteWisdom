@@ -23,12 +23,18 @@ from time import sleep
 
 import requests
 from PIL import Image
+from prometheus_client import start_http_server, Gauge, Summary
 from telegram import InlineQueryResultPhoto, ChatAction
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
+START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
+INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
+INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 
 TOKEN = os.environ.get('BOT_TOKEN')
 
@@ -41,11 +47,13 @@ def add_image_url_to_pool() -> str:
     url_page.raise_for_status()
     url = url_page.text
     url_pool.append(url)
+    POOL_SIZE.set(len(url_pool))
     LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(len(url_pool), url))
     return url
 
 def get_image_url() -> str:
     url = url_pool.popleft()
+    POOL_SIZE.set(len(url_pool))
     LOGGER.debug('Got image URL from the pool: {}'.format(url))
     return url
 
@@ -56,10 +64,12 @@ def get_image():
     LOGGER.debug('Fetched image from: {}'.format(url))
     return Image.open(BytesIO(image.content))
 
+@START_TIME.time()
 def start(bot, update):
     send_random_quote(bot, update)
     bot.send_message(chat_id=update.message.chat_id, text='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
+@INSPIRE_TIME.time()
 def send_random_quote(bot, update):
     bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
     image = get_image()
@@ -69,6 +79,7 @@ def send_random_quote(bot, update):
     bio.seek(0)
     bot.send_photo(chat_id=update.message.chat_id, photo=bio)
 
+@INLINE_TIME.time()
 def inlinequery(bot, update):
     LOGGER.debug('Inline query')
     results = []
@@ -90,6 +101,9 @@ def add_quotes(count=300):
 
 def add_quotes_job(bot, update):
     add_quotes(count=300)
+
+
+start_http_server(8000)
 
 add_quotes(count=16)
 
