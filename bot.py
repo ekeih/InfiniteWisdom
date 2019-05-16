@@ -22,9 +22,8 @@ from io import BytesIO
 from time import sleep
 
 import requests
-from PIL import Image
 from prometheus_client import start_http_server, Gauge, Summary
-from telegram import InlineQueryResultPhoto, ChatAction
+from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 from const import ENV_PARAM_BOT_TOKEN
@@ -84,19 +83,18 @@ def get_image_url() -> str:
     return url
 
 
-def get_image() -> Image:
+def download_image_bytes(url: str) -> bytes:
     """
     Downloads the image from the given url
     :return:
     """
-    url = get_image_url()
     image = requests.get(url)
     image.raise_for_status()
     LOGGER.debug('Fetched image from: {}'.format(url))
-    return Image.open(BytesIO(image.content))
+    return image.content
 
 @START_TIME.time()
-def start(bot, update) -> None:
+def start(bot: Bot, update: Update) -> None:
     """
     Welcomes a new user with an example image and a greeting message
     :param bot:
@@ -109,22 +107,32 @@ def start(bot, update) -> None:
 
 
 @INSPIRE_TIME.time()
-def send_random_quote(bot, update) -> None:
+def send_random_quote(bot: Bot, update: Update) -> None:
     """
     Sends a quote from the pool to the requesting chat
     :param bot: the bot
     :param update: the chat updater object
     """
     bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
-    image = get_image()
-    bio = BytesIO()
-    bio.name = 'inspireme.jpeg'
-    image.save(bio, 'JPEG')
-    bio.seek(0)
-    bot.send_photo(chat_id=update.message.chat_id, photo=bio)
+    image_url = get_image_url()
+    image_bytes = download_image_bytes(image_url)
+    send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
+
+
+def send_photo(bot: Bot, chat_id: str, image_data: bytes) -> None:
+    """
+    Sends a photo to the given chat
+    :param bot: the bot
+    :param chat_id: the chat id to send the image to
+    :param image_data: the image data
+    """
+    image_bytes_io = BytesIO(image_data)
+    image_bytes_io.name = 'inspireme.jpeg'
+    bot.send_photo(chat_id=chat_id, photo=image_bytes_io)
+
 
 @INLINE_TIME.time()
-def inlinequery(bot, update) -> None:
+def inlinequery(bot: Bot, update: Update) -> None:
     """
     Responds to an inline client request with a list of 16 randomly chosen images
     :param bot: the bot
@@ -155,7 +163,7 @@ def add_quotes(count: int = 300) -> None:
         sleep(1)
 
 
-def add_quotes_job(bot, update) -> None:
+def add_quotes_job(bot: Bot, update: Update) -> None:
     add_quotes(count=300)
 
 
