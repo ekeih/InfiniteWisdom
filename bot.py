@@ -17,8 +17,8 @@
 import logging
 import os
 import random
-from io import BytesIO
 from collections import deque
+from io import BytesIO
 from time import sleep
 
 import requests
@@ -26,6 +26,8 @@ from PIL import Image
 from prometheus_client import start_http_server, Gauge, Summary
 from telegram import InlineQueryResultPhoto, ChatAction
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
+
+from const import ENV_PARAM_BOT_TOKEN
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -36,28 +38,51 @@ START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handl
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 
-TOKEN = os.environ.get('BOT_TOKEN')
+TOKEN = os.environ.get(ENV_PARAM_BOT_TOKEN)
 
 url_pool = deque(maxlen=10000)
 updater = Updater(token=TOKEN)
 dispatcher = updater.dispatcher
 
+
 def add_image_url_to_pool() -> str:
-    url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
-    url_page.raise_for_status()
-    url = url_page.text
+    """
+    Requests a new image url and adds it to the pool
+    :return: the added url
+    """
+    url = fetch_generated_image_url()
     url_pool.append(url)
     POOL_SIZE.set(len(url_pool))
     LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(len(url_pool), url))
     return url
 
+
+def fetch_generated_image_url() -> str:
+    """
+    Requests the image api to generate a new image url
+    :return: the image url
+    """
+    url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
+    url_page.raise_for_status()
+    return url_page.text
+
+
 def get_image_url() -> str:
+    """
+    Pops the oldest image url from the pool
+    :return: image url
+    """
     url = url_pool.popleft()
     POOL_SIZE.set(len(url_pool))
     LOGGER.debug('Got image URL from the pool: {}'.format(url))
     return url
 
-def get_image():
+
+def get_image() -> Image:
+    """
+    Downloads the image from the given url
+    :return:
+    """
     url = get_image_url()
     image = requests.get(url)
     image.raise_for_status()
@@ -67,7 +92,9 @@ def get_image():
 @START_TIME.time()
 def start(bot, update):
     send_random_quote(bot, update)
-    bot.send_message(chat_id=update.message.chat_id, text='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
+    bot.send_message(chat_id=update.message.chat_id,
+                     text='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
+
 
 @INSPIRE_TIME.time()
 def send_random_quote(bot, update):
@@ -94,24 +121,27 @@ def inlinequery(bot, update):
     LOGGER.debug('Inline results: {}'.format(len(results)))
     update.inline_query.answer(results)
 
+
 def add_quotes(count=300):
     for _ in range(count):
         add_image_url_to_pool()
         sleep(1)
 
+
 def add_quotes_job(bot, update):
     add_quotes(count=300)
 
 
-start_http_server(8000)
+if __name__ == '__main__':
+    add_quotes(count=16)
 
-add_quotes(count=16)
+    start_http_server(8000)
 
-queue = updater.job_queue
-queue.run_repeating(add_quotes_job, interval=600, first=0)
+    queue = updater.job_queue
+    queue.run_repeating(add_quotes_job, interval=600, first=0)
 
-dispatcher.add_handler(CommandHandler('start', start))
-dispatcher.add_handler(InlineQueryHandler(inlinequery))
-dispatcher.add_handler(MessageHandler(Filters.command, send_random_quote))
+    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(InlineQueryHandler(inlinequery))
+    dispatcher.add_handler(MessageHandler(Filters.command, send_random_quote))
 
-updater.start_polling()
+    updater.start_polling()
