@@ -86,7 +86,7 @@ def get_image_url() -> str:
 def download_image_bytes(url: str) -> bytes:
     """
     Downloads the image from the given url
-    :return:
+    :return: the downloaded image
     """
     image = requests.get(url)
     image.raise_for_status()
@@ -111,7 +111,7 @@ def send_random_quote(bot: Bot, update: Update) -> None:
     """
     Sends a quote from the pool to the requesting chat
     :param bot: the bot
-    :param update: the chat updater object
+    :param update: the chat update object
     """
     bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
     image_url = get_image_url()
@@ -136,7 +136,7 @@ def inlinequery(bot: Bot, update: Update) -> None:
     """
     Responds to an inline client request with a list of 16 randomly chosen images
     :param bot: the bot
-    :param update: the chat updater object
+    :param update: the chat update object
     """
     LOGGER.debug('Inline query')
     results = []
