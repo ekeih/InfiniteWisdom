@@ -38,11 +38,17 @@ START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handl
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 
-TOKEN = os.environ.get(ENV_PARAM_BOT_TOKEN)
-
 url_pool = deque(maxlen=10000)
-updater = Updater(token=TOKEN)
-dispatcher = updater.dispatcher
+
+
+def load_config() -> dict:
+    """
+    Loads the configuration from environment variables
+    :return: configuration
+    """
+    return {
+        ENV_PARAM_BOT_TOKEN: os.environ.get(ENV_PARAM_BOT_TOKEN)
+    }
 
 
 def add_image_url_to_pool() -> str:
@@ -90,14 +96,25 @@ def get_image() -> Image:
     return Image.open(BytesIO(image.content))
 
 @START_TIME.time()
-def start(bot, update):
+def start(bot, update) -> None:
+    """
+    Welcomes a new user with an example image and a greeting message
+    :param bot:
+    :param update:
+    :return:
+    """
     send_random_quote(bot, update)
     bot.send_message(chat_id=update.message.chat_id,
                      text='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
 
 @INSPIRE_TIME.time()
-def send_random_quote(bot, update):
+def send_random_quote(bot, update) -> None:
+    """
+    Sends a quote from the pool to the requesting chat
+    :param bot: the bot
+    :param update: the chat updater object
+    """
     bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
     image = get_image()
     bio = BytesIO()
@@ -107,14 +124,19 @@ def send_random_quote(bot, update):
     bot.send_photo(chat_id=update.message.chat_id, photo=bio)
 
 @INLINE_TIME.time()
-def inlinequery(bot, update):
+def inlinequery(bot, update) -> None:
+    """
+    Responds to an inline client request with a list of 16 randomly chosen images
+    :param bot: the bot
+    :param update: the chat updater object
+    """
     LOGGER.debug('Inline query')
     results = []
-    for u in random.sample(url_pool, k=16):
+    for url in random.sample(url_pool, k=16):
         results.append(InlineQueryResultPhoto(
-            id=u,
-            photo_url=u,
-            thumb_url=u,
+            id=url,
+            photo_url=url,
+            thumb_url=url,
             photo_height=50,
             photo_width=50
         ))
@@ -122,18 +144,27 @@ def inlinequery(bot, update):
     update.inline_query.answer(results)
 
 
-def add_quotes(count=300):
+def add_quotes(count: int = 300) -> None:
+    """
+    Adds the given amount of image url's to the pool, sleeping between ever single
+    one of them. This method is blocking so it should be called from a background thread.
+    :param count: amount of image url's to query
+    """
     for _ in range(count):
         add_image_url_to_pool()
         sleep(1)
 
 
-def add_quotes_job(bot, update):
+def add_quotes_job(bot, update) -> None:
     add_quotes(count=300)
 
 
 if __name__ == '__main__':
+    config = load_config()
+
     add_quotes(count=16)
+    updater = Updater(token=config[ENV_PARAM_BOT_TOKEN])
+    dispatcher = updater.dispatcher
 
     start_http_server(8000)
 
