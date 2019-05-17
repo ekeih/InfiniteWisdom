@@ -184,7 +184,7 @@ class InfiniteWisdomBot:
         """
         for _ in range(count):
             self.add_image_url_to_pool()
-            sleep(1)
+            sleep(self._config.IMAGE_POLLING_TIMEOUT)
 
     def _add_quotes_job(self, bot: Bot, update: Update) -> None:
         self._add_quotes(count=300)
