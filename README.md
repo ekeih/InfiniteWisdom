@@ -27,7 +27,7 @@ The yaml file can be placed in one of the following directories:
 
 and looks like this:
 
-```
+```yaml
 InfiniteWisdom:
   bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
   greetings_message: "Hi there!"
@@ -40,7 +40,7 @@ InfiniteWisdom:
 Create a configuration as described in the section above and start 
 the bot using:
 
-```
+```shell
 python ./bot.py
 ```
 
