@@ -1,8 +1,11 @@
+import logging
 import os
 import pickle
 import random
 
 from const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Entity:
@@ -15,7 +18,7 @@ class Entity:
         self.text = text
 
 
-class ImageUrlPersistence:
+class ImageDataPersistence:
     """
     Persistence base class
     """
@@ -56,6 +59,7 @@ class ImageUrlPersistence:
         Removes an entity from the persistence
         :param url: the image url
         """
+        raise NotImplementedError()
 
     def clear(self) -> None:
         """
@@ -64,7 +68,7 @@ class ImageUrlPersistence:
         raise NotImplementedError()
 
 
-class LocalPersistence(ImageUrlPersistence):
+class LocalPersistence(ImageDataPersistence):
     """
     Implementation using a local file
     """
@@ -79,6 +83,7 @@ class LocalPersistence(ImageUrlPersistence):
         else:
             self._file_path = os.path.join(DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, self.FILE_NAME)
 
+        LOGGER.debug("Loading local persistence from: {}".format(self._file_path))
         self._load()
 
     def _load(self) -> None:
@@ -98,6 +103,8 @@ class LocalPersistence(ImageUrlPersistence):
 
         with open(self._file_path, "rb") as file:
             self._entities = pickle.load(file)
+
+        LOGGER.debug("Local persistence loaded: {} entities".format(len(self._entities)))
 
     def _save(self) -> None:
         """
@@ -122,6 +129,10 @@ class LocalPersistence(ImageUrlPersistence):
 
     def count(self) -> int:
         return len(self._entities)
+
+    def delete(self, url: str):
+        self._entities = list(filter(lambda x: x.url is not url, self._entities))
+        self._save()
 
     def clear(self) -> None:
         self._entities.clear()
