@@ -16,8 +16,6 @@
 
 import logging
 import os
-import random
-from collections import deque
 from io import BytesIO
 from time import sleep
 
@@ -27,6 +25,7 @@ from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 from const import ENV_PARAM_BOT_TOKEN
+from persistence import LocalPersistence
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -37,7 +36,7 @@ START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handl
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 
-url_pool = deque(maxlen=10000)
+persistence = LocalPersistence()
 
 
 def load_config() -> dict:
@@ -56,9 +55,10 @@ def add_image_url_to_pool() -> str:
     :return: the added url
     """
     url = fetch_generated_image_url()
-    url_pool.append(url)
-    POOL_SIZE.set(len(url_pool))
-    LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(len(url_pool), url))
+    persistence.add(url)
+    count = persistence.count()
+    POOL_SIZE.set(count)
+    LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(count, url))
     return url
 
 
@@ -77,10 +77,9 @@ def get_image_url() -> str:
     Pops the oldest image url from the pool
     :return: image url
     """
-    url = url_pool.popleft()
-    POOL_SIZE.set(len(url_pool))
-    LOGGER.debug('Got image URL from the pool: {}'.format(url))
-    return url
+    entity = persistence.get_random()
+    LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
+    return entity.url
 
 
 def download_image_bytes(url: str) -> bytes:
@@ -92,6 +91,7 @@ def download_image_bytes(url: str) -> bytes:
     image.raise_for_status()
     LOGGER.debug('Fetched image from: {}'.format(url))
     return image.content
+
 
 @START_TIME.time()
 def start(bot: Bot, update: Update) -> None:
@@ -139,20 +139,21 @@ def inlinequery(bot: Bot, update: Update) -> None:
     :param update: the chat update object
     """
     LOGGER.debug('Inline query')
-    results = []
-    for url in random.sample(url_pool, k=16):
-        results.append(InlineQueryResultPhoto(
-            id=url,
-            photo_url=url,
-            thumb_url=url,
-            photo_height=50,
-            photo_width=50
-        ))
+
+    random_entities = persistence.get_random(sample_size=16)
+    results = list(map(lambda x: InlineQueryResultPhoto(
+        id=x.url,
+        photo_url=x.url,
+        thumb_url=x.url,
+        photo_height=50,
+        photo_width=50
+    ), random_entities))
+
     LOGGER.debug('Inline results: {}'.format(len(results)))
     update.inline_query.answer(results)
 
 
-def add_quotes(count: int = 300) -> None:
+def add_quotes(count: int = 300, timeout: int = 1) -> None:
     """
     Adds the given amount of image url's to the pool, sleeping between ever single
     one of them. This method is blocking so it should be called from a background thread.
@@ -160,7 +161,7 @@ def add_quotes(count: int = 300) -> None:
     """
     for _ in range(count):
         add_image_url_to_pool()
-        sleep(1)
+        sleep(timeout)
 
 
 def add_quotes_job(bot: Bot, update: Update) -> None:
@@ -170,7 +171,9 @@ def add_quotes_job(bot: Bot, update: Update) -> None:
 if __name__ == '__main__':
     config = load_config()
 
-    add_quotes(count=16)
+    if persistence.count() < 16:
+        add_quotes(count=16, timeout=0)
+        
     updater = Updater(token=config[ENV_PARAM_BOT_TOKEN])
     dispatcher = updater.dispatcher
 

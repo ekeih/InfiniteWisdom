@@ -18,4 +18,6 @@
 Holds important constants
 """
 
+DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH = "/tmp"
+
 ENV_PARAM_BOT_TOKEN = 'BOT_TOKEN'
