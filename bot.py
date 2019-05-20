@@ -56,8 +56,6 @@ def add_image_url_to_pool() -> str:
     """
     url = fetch_generated_image_url()
     persistence.add(url)
-    count = persistence.count()
-    POOL_SIZE.set(count)
     LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(count, url))
     return url
 
@@ -173,7 +171,7 @@ if __name__ == '__main__':
 
     if persistence.count() < 16:
         add_quotes(count=16, timeout=0)
-        
+
     updater = Updater(token=config[ENV_PARAM_BOT_TOKEN])
     dispatcher = updater.dispatcher
 

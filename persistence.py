@@ -19,6 +19,7 @@ import os
 import pickle
 import random
 
+from bot import POOL_SIZE
 from const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
 
 LOGGER = logging.getLogger(__name__)
@@ -120,6 +121,7 @@ class LocalPersistence(ImageDataPersistence):
         with open(self._file_path, "rb") as file:
             self._entities = pickle.load(file)
 
+        POOL_SIZE.set(self.count())
         LOGGER.debug("Local persistence loaded: {} entities".format(len(self._entities)))
 
     def _save(self) -> None:
@@ -132,6 +134,7 @@ class LocalPersistence(ImageDataPersistence):
     def add(self, url: str, text: str = None) -> None:
         entity = Entity(url, text)
         self._entities.append(entity)
+        POOL_SIZE.set(self.count())
         self._save()
 
     def get_random(self, sample_size: int = None) -> Entity or [Entity]:
@@ -148,8 +151,10 @@ class LocalPersistence(ImageDataPersistence):
 
     def delete(self, url: str):
         self._entities = list(filter(lambda x: x.url is not url, self._entities))
+        POOL_SIZE.set(self.count())
         self._save()
 
     def clear(self) -> None:
         self._entities.clear()
+        POOL_SIZE.set(self.count())
         self._save()
