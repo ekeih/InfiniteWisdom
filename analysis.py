@@ -57,3 +57,43 @@ class GoogleVision(ImageAnalyser):
             return text_annotations[0].description
         else:
             return None
+
+
+class Tesseract(ImageAnalyser):
+    """
+    pytesseract implementation
+    """
+
+    def find_text(self, image: bytes):
+        try:
+            from PIL import Image
+        except ImportError:
+            import Image
+        import pytesseract
+
+        # pytesseract.pytesseract.tesseract_cmd = r'<full_path_to_your_tesseract_executable>'
+
+        image = self._preprocess(image)
+
+        # We'll use Pillow's Image class to open the image and pytesseract to detect the string in the image
+        text = pytesseract.image_to_string(image)
+        return text
+
+    @staticmethod
+    def _preprocess(image: bytes) -> bytes:
+        """
+        Applies pre-processing to a given image to improve text recognition
+        :param image: the original image to process
+        :return: the processed image
+        """
+        import cv2
+        import numpy as np
+
+        bytes_as_np_array = np.frombuffer(image, dtype=np.uint8)
+        flags = cv2.IMREAD_GRAYSCALE
+        image = cv2.imdecode(bytes_as_np_array, flags)
+
+        # apply slight blur
+        image = cv2.medianBlur(image, 3)
+
+        return image
