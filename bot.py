@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-import os
 from io import BytesIO
 from time import sleep
 
@@ -24,7 +23,7 @@ from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
-from const import ENV_PARAM_BOT_TOKEN
+from config import Config
 from persistence import LocalPersistence
 from stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
@@ -32,152 +31,160 @@ logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(le
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
-persistence = LocalPersistence()
 
-
-def load_config() -> dict:
+class InfiniteWisdomBot:
     """
-    Loads the configuration from environment variables
-    :return: configuration
+    The main entry class of the InfiniteWisdom telegram bot
     """
-    return {
-        ENV_PARAM_BOT_TOKEN: os.environ.get(ENV_PARAM_BOT_TOKEN)
-    }
 
+    def __init__(self):
+        self._config = Config()
+        self._persistence = LocalPersistence()
+        self._updater = Updater(token=self._config.BOT_TOKEN)
 
-def add_image_url_to_pool() -> str:
-    """
-    Requests a new image url and adds it to the pool
-    :return: the added url
-    """
-    url = fetch_generated_image_url()
-    persistence.add(url)
-    LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(persistence.count(), url))
-    return url
+        self._dispatcher = self._updater.dispatcher
+        self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
+        self._dispatcher.add_handler(InlineQueryHandler(self._inline_query_callback))
+        self._dispatcher.add_handler(MessageHandler(Filters.command, self._command_callback))
 
+    def start(self):
+        """
+        Starts up the bot.
+        This means filling the url pool and listening for messages.
+        """
+        if self._persistence.count() < 16:
+            self._add_quotes(count=16)
 
-def fetch_generated_image_url() -> str:
-    """
-    Requests the image api to generate a new image url
-    :return: the image url
-    """
-    url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
-    url_page.raise_for_status()
-    return url_page.text
+        queue = self._updater.job_queue
+        queue.run_repeating(self._add_quotes_job, interval=600, first=0)
 
+        self._updater.start_polling()
 
-def get_image_url() -> str:
-    """
-    Pops the oldest image url from the pool
-    :return: image url
-    """
-    entity = persistence.get_random()
-    LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
-    return entity.url
+    def stop(self):
+        """
+        Shuts down the bot.
+        """
+        self._updater.stop()
 
+    def add_image_url_to_pool(self) -> str:
+        """
+        Requests a new image url and adds it to the pool
+        :return: the added url
+        """
+        url = self._fetch_generated_image_url()
+        self._persistence.add(url)
+        LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(self._persistence.count(), url))
+        return url
 
-def download_image_bytes(url: str) -> bytes:
-    """
-    Downloads the image from the given url
-    :return: the downloaded image
-    """
-    image = requests.get(url)
-    image.raise_for_status()
-    LOGGER.debug('Fetched image from: {}'.format(url))
-    return image.content
+    @staticmethod
+    def _fetch_generated_image_url() -> str:
+        """
+        Requests the image api to generate a new image url
+        :return: the image url
+        """
+        url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
+        url_page.raise_for_status()
+        return url_page.text
 
+    def _get_image_url(self) -> str:
+        """
+        Returns a random image url from the persistence
+        :return: image url
+        """
+        entity = self._persistence.get_random()
+        LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
+        return entity.url
 
-@START_TIME.time()
-def start(bot: Bot, update: Update) -> None:
-    """
-    Welcomes a new user with an example image and a greeting message
-    :param bot:
-    :param update:
-    :return:
-    """
-    send_random_quote(bot, update)
-    bot.send_message(chat_id=update.message.chat_id,
-                     text='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
+    @staticmethod
+    def _download_image_bytes(url: str) -> bytes:
+        """
+        Downloads the image from the given url
+        :return: the downloaded image
+        """
+        image = requests.get(url)
+        image.raise_for_status()
+        LOGGER.debug('Fetched image from: {}'.format(url))
+        return image.content
 
+    @START_TIME.time()
+    def _start_callback(self, bot: Bot, update: Update) -> None:
+        """
+        Welcomes a new user with an example image and a greeting message
+        :param bot: the bot
+        :param update: the chat update object
+        """
+        self._send_random_quote(bot, update)
+        bot.send_message(chat_id=update.message.chat_id,
+                         text=self._config.GREETING_MESSAGE)
 
-@INSPIRE_TIME.time()
-def send_random_quote(bot: Bot, update: Update) -> None:
-    """
-    Sends a quote from the pool to the requesting chat
-    :param bot: the bot
-    :param update: the chat update object
-    """
-    bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
-    image_url = get_image_url()
-    image_bytes = download_image_bytes(image_url)
-    send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
+    def _command_callback(self, bot: Bot, update: Update) -> None:
+        """
+        Handles commands send by a user
+        :param bot: the bot
+        :param update: the chat update object
+        """
+        self._send_random_quote(bot, update)
 
+    @INSPIRE_TIME.time()
+    def _send_random_quote(self, bot: Bot, update: Update) -> None:
+        """
+        Sends a quote from the pool to the requesting chat
+        :param bot: the bot
+        :param update: the chat update object
+        """
+        bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+        image_url = self._get_image_url()
+        image_bytes = self._download_image_bytes(image_url)
+        self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
 
-def send_photo(bot: Bot, chat_id: str, image_data: bytes) -> None:
-    """
-    Sends a photo to the given chat
-    :param bot: the bot
-    :param chat_id: the chat id to send the image to
-    :param image_data: the image data
-    """
-    image_bytes_io = BytesIO(image_data)
-    image_bytes_io.name = 'inspireme.jpeg'
-    bot.send_photo(chat_id=chat_id, photo=image_bytes_io)
+    @staticmethod
+    def _send_photo(bot: Bot, chat_id: str, image_data: bytes) -> None:
+        """
+        Sends a photo to the given chat
+        :param bot: the bot
+        :param chat_id: the chat id to send the image to
+        :param image_data: the image data
+        """
+        image_bytes_io = BytesIO(image_data)
+        image_bytes_io.name = 'inspireme.jpeg'
+        bot.send_photo(chat_id=chat_id, photo=image_bytes_io)
 
+    @INLINE_TIME.time()
+    def _inline_query_callback(self, bot: Bot, update: Update) -> None:
+        """
+        Responds to an inline client request with a list of 16 randomly chosen images
+        :param bot: the bot
+        :param update: the chat update object
+        """
+        LOGGER.debug('Inline query')
 
-@INLINE_TIME.time()
-def inlinequery(bot: Bot, update: Update) -> None:
-    """
-    Responds to an inline client request with a list of 16 randomly chosen images
-    :param bot: the bot
-    :param update: the chat update object
-    """
-    LOGGER.debug('Inline query')
+        random_entities = self._persistence.get_random(sample_size=16)
+        results = list(map(lambda x: InlineQueryResultPhoto(
+            id=x.url,
+            photo_url=x.url,
+            thumb_url=x.url,
+            photo_height=50,
+            photo_width=50
+        ), random_entities))
 
-    random_entities = persistence.get_random(sample_size=16)
-    results = list(map(lambda x: InlineQueryResultPhoto(
-        id=x.url,
-        photo_url=x.url,
-        thumb_url=x.url,
-        photo_height=50,
-        photo_width=50
-    ), random_entities))
+        LOGGER.debug('Inline results: {}'.format(len(results)))
+        update.inline_query.answer(results)
 
-    LOGGER.debug('Inline results: {}'.format(len(results)))
-    update.inline_query.answer(results)
+    def _add_quotes(self, count: int = 300) -> None:
+        """
+        Adds the given amount of image url's to the pool, sleeping between ever single
+        one of them. This method is blocking so it should be called from a background thread.
+        :param count: amount of image url's to query
+        """
+        for _ in range(count):
+            self.add_image_url_to_pool()
+            sleep(self._config.IMAGE_POLLING_TIMEOUT)
 
-
-def add_quotes(count: int = 300, timeout: int = 1) -> None:
-    """
-    Adds the given amount of image url's to the pool, sleeping between ever single
-    one of them. This method is blocking so it should be called from a background thread.
-    :param count: amount of image url's to query
-    """
-    for _ in range(count):
-        add_image_url_to_pool()
-        sleep(timeout)
-
-
-def add_quotes_job(bot: Bot, update: Update) -> None:
-    add_quotes(count=300)
+    def _add_quotes_job(self, bot: Bot, update: Update) -> None:
+        self._add_quotes(count=300)
 
 
 if __name__ == '__main__':
-    config = load_config()
-
-    if persistence.count() < 16:
-        add_quotes(count=16, timeout=0)
-
-    updater = Updater(token=config[ENV_PARAM_BOT_TOKEN])
-    dispatcher = updater.dispatcher
-
     start_http_server(8000)
-
-    queue = updater.job_queue
-    queue.run_repeating(add_quotes_job, interval=600, first=0)
-
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(InlineQueryHandler(inlinequery))
-    dispatcher.add_handler(MessageHandler(Filters.command, send_random_quote))
-
-    updater.start_polling()
+    wisdom_bot = InfiniteWisdomBot()
+    wisdom_bot.start()
