@@ -158,6 +158,9 @@ class InfiniteWisdomBot:
         """
         LOGGER.debug('Inline query')
 
+        query = update.inline_query.query
+        offset = update.inline_query.offset
+
         random_entities = self._persistence.get_random(sample_size=16)
         results = list(map(lambda x: InlineQueryResultPhoto(
             id=x.url,
@@ -166,9 +169,15 @@ class InfiniteWisdomBot:
             photo_height=50,
             photo_width=50
         ), random_entities))
+        LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
 
-        LOGGER.debug('Inline results: {}'.format(len(results)))
-        update.inline_query.answer(results)
+        if not offset:
+            offset = 0
+        new_offset = int(offset) + 16
+        update.inline_query.answer(
+            results,
+            next_offset=new_offset
+        )
 
     def _add_quotes(self, count: int = 300) -> None:
         """
