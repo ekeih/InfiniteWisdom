@@ -30,7 +30,6 @@ class ImageApiTests(unittest.TestCase):
         ENV_PARAM_BOT_TOKEN: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     })
     def test_retrieve_new_image(self):
-        from bot import fetch_generated_image_url
-
-        url = fetch_generated_image_url()
+        from bot import InfiniteWisdomBot
+        url = InfiniteWisdomBot._fetch_generated_image_url()
         self.assertRegex(url, r'https://generated\.inspirobot\.me/\w/\w+\.jpg')
