@@ -164,6 +164,8 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         """
         LOGGER.debug('Inline query')
+        query = update.inline_query.query
+        offset = update.inline_query.offset
         results = []
         for url in random.sample(self._url_pool, k=16):
             results.append(InlineQueryResultPhoto(
@@ -173,8 +175,15 @@ class InfiniteWisdomBot:
                 photo_height=50,
                 photo_width=50
             ))
-        LOGGER.debug('Inline results: {}'.format(len(results)))
-        update.inline_query.answer(results)
+        LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
+
+        if not offset:
+            offset = 0
+        new_offset = int(offset) + 16
+        update.inline_query.answer(
+            results,
+            next_offset=new_offset
+        )
 
     def _add_quotes(self, count: int = 300) -> None:
         """
