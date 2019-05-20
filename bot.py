@@ -20,21 +20,17 @@ from io import BytesIO
 from time import sleep
 
 import requests
-from prometheus_client import start_http_server, Gauge, Summary
+from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 from const import ENV_PARAM_BOT_TOKEN
 from persistence import LocalPersistence
+from stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
-
-POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
-START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
-INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
-INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 
 persistence = LocalPersistence()
 
@@ -56,7 +52,7 @@ def add_image_url_to_pool() -> str:
     """
     url = fetch_generated_image_url()
     persistence.add(url)
-    LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(count, url))
+    LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(persistence.count(), url))
     return url
 
 
