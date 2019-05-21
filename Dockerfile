@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY infinitewisdom/ infinitewisdom/
+COPY infinitewisdom/bot.py bot.py
 
-WORKDIR /app/infinitewisdom
 
 CMD [ "python", "./bot.py" ]
