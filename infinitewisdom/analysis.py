@@ -13,6 +13,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import math
+import os
 
 
 class ImageAnalyser:
@@ -25,6 +27,18 @@ class ImageAnalyser:
         :return: an identifier for this analyser
         """
         raise NotImplementedError()
+
+    def get_quality(self) -> float:
+        """
+        :return: the quality of this analyser compared to other implementations
+        """
+        raise NotImplementedError()
+
+    def get_monthly_capacity(self) -> float:
+        """
+        :return: the number of items per month that can be analysed by this analyser
+        """
+        return math.inf
 
     def find_text(self, image: bytes) -> str or None:
         """
@@ -40,18 +54,27 @@ class GoogleVision(ImageAnalyser):
     Google Vision API implementation
     """
 
-    def __init__(self, auth_file: str):
+    def __init__(self, auth_file_path: str):
         """
-        :param auth_file: authentication file for the google vision api
+        :param auth_file_path: authentication file for the google vision api
         """
         # Imports the Google Cloud client library
         from google.cloud import vision
 
+        self._auth_file_path = auth_file_path
+        self._auth_id = os.path.split(auth_file_path)[1]
+
         # Instantiates a client
-        self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file)
+        self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file_path)
 
     def get_identifier(self) -> str:
-        return "google-vision"
+        return "google-vision_{}".format(self._auth_id)
+
+    def get_quality(self) -> float:
+        return 0.9
+
+    def get_monthly_capacity(self) -> float:
+        return 1000.0
 
     def find_text(self, image: bytes):
         from google.cloud.vision import types
@@ -75,6 +98,9 @@ class Tesseract(ImageAnalyser):
 
     def get_identifier(self) -> str:
         return "tesseract"
+
+    def get_quality(self) -> float:
+        return 0.25
 
     def find_text(self, image: bytes):
         try:

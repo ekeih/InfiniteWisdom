@@ -201,6 +201,10 @@ class LocalPersistence(ImageDataPersistence):
     def count(self) -> int:
         return len(self._entities)
 
+    def count_items_this_month(self, analyser: str):
+        return len(list(
+            filter(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 30), self._entities)))
+
     def delete(self, url: str):
         self._entities = list(filter(lambda x: x.url is not url, self._entities))
         POOL_SIZE.set(self.count())
