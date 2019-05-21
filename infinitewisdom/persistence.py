@@ -56,6 +56,14 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    def find_by_url(self, url: str) -> [Entity]:
+        """
+        Finds a list of entities with exactly the given url
+        :param url: the url to search for
+        :return: list of entities
+        """
+        raise NotImplementedError()
+
     def find_by_text(self, text: str = None, limit: int = None, offset: int = 0) -> [Entity]:
         """
         Finds a list of entities containing the given text
@@ -153,6 +161,10 @@ class LocalPersistence(ImageDataPersistence):
             pickle.dump(self._entities, file)
 
     def add(self, url: str, text: str = None) -> None:
+        if len(self.find_by_url(url)) > 0:
+            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
+            return
+
         entity = Entity(url, text)
         self._entities.append(entity)
         POOL_SIZE.set(self.count())
@@ -163,6 +175,9 @@ class LocalPersistence(ImageDataPersistence):
             return random.choice(self._entities)
 
         return random.sample(self._entities, k=sample_size)
+
+    def find_by_url(self, url: str) -> [Entity]:
+        return list(filter(lambda x: x.url == url, self._entities))
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         if limit is None:

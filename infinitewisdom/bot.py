@@ -43,7 +43,7 @@ class InfiniteWisdomBot:
     def __init__(self):
         self._config = Config()
 
-        if self._config.PERSISTENCE_TYPE == PERSISTENCE_TYPE_LOCAL:
+        if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
             self._persistence = LocalPersistence()
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT:
