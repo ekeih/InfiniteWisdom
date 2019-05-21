@@ -123,11 +123,16 @@ class LocalPersistence(ImageDataPersistence):
 
     _entities = []
 
-    def __init__(self, file_path: str = None):
-        if file_path is not None:
-            self._file_path = file_path
-        else:
-            self._file_path = os.path.join(DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, self.FILE_NAME)
+    def __init__(self, folder: str = None):
+        if folder is None:
+            folder = DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+
+        if not os.path.exists(folder):
+            raise FileNotFoundError("Path does not exist: {}".format(folder))
+        if not os.path.isdir(folder):
+            raise NotADirectoryError("Path is not a folder: {}".format(folder))
+
+        self._file_path = os.path.join(DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, self.FILE_NAME)
 
         LOGGER.debug("Loading local persistence from: {}".format(self._file_path))
         self._load()

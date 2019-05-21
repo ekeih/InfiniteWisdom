@@ -108,7 +108,8 @@ class Config:
         ],
         default=None)
 
-    _config_entries = [BOT_TOKEN, URL_POOL_SIZE, IMAGE_POLLING_TIMEOUT, GREETING_MESSAGE,
+    _config_entries = [BOT_TOKEN, URL_POOL_SIZE, IMAGE_POLLING_TIMEOUT, GREETING_MESSAGE, INLINE_BADGE_SIZE,
+                       PERSISTENCE_TYPE, LOCAL_PERSISTENCE_FOLDER_PATH,
                        IMAGE_ANALYSIS_TYPE, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE]
 
     def __init__(self):

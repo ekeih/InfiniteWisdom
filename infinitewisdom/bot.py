@@ -44,7 +44,7 @@ class InfiniteWisdomBot:
         self._config = Config()
 
         if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
-            self._persistence = LocalPersistence()
+            self._persistence = LocalPersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT:
             self._image_analyser = Tesseract()
