@@ -86,6 +86,14 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    def count_items_this_month(self, analyser: str) -> int:
+        """
+        Returns the number of items added this month by the given analyser
+        :param analyser: analyser to check
+        :return: number of items
+        """
+        raise NotImplementedError()
+
     def delete(self, url: str) -> None:
         """
         Removes an entity from the persistence
@@ -201,7 +209,7 @@ class LocalPersistence(ImageDataPersistence):
     def count(self) -> int:
         return len(self._entities)
 
-    def count_items_this_month(self, analyser: str):
+    def count_items_this_month(self, analyser: str) -> int:
         return len(list(
             filter(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 31), self._entities)))
 
