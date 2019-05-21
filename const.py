@@ -18,6 +18,8 @@
 Holds important constants
 """
 
+DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH = "/tmp"
+
 CONFIG_FILE_NAME = "infinitewisdom"
 
 # the order of this list also defines priority

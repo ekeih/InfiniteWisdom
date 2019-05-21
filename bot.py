@@ -15,26 +15,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-import random
-from collections import deque
 from io import BytesIO
 from time import sleep
 
 import requests
-from prometheus_client import start_http_server, Gauge, Summary
+from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 from config import Config
+from persistence import LocalPersistence
+from stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
-
-POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
-START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
-INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
-INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 
 
 class InfiniteWisdomBot:
@@ -44,7 +39,7 @@ class InfiniteWisdomBot:
 
     def __init__(self):
         self._config = Config()
-        self._url_pool = deque(maxlen=self._config.URL_POOL_SIZE)
+        self._persistence = LocalPersistence()
         self._updater = Updater(token=self._config.BOT_TOKEN)
 
         self._dispatcher = self._updater.dispatcher
@@ -57,7 +52,8 @@ class InfiniteWisdomBot:
         Starts up the bot.
         This means filling the url pool and listening for messages.
         """
-        self._add_quotes(count=16)
+        if self._persistence.count() < 16:
+            self._add_quotes(count=16)
 
         queue = self._updater.job_queue
         queue.run_repeating(self._add_quotes_job, interval=600, first=0)
@@ -68,7 +64,6 @@ class InfiniteWisdomBot:
         """
         Shuts down the bot.
         """
-
         self._updater.stop()
 
     def add_image_url_to_pool(self) -> str:
@@ -77,9 +72,8 @@ class InfiniteWisdomBot:
         :return: the added url
         """
         url = self._fetch_generated_image_url()
-        self._url_pool.append(url)
-        POOL_SIZE.set(len(self._url_pool))
-        LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(len(self._url_pool), url))
+        self._persistence.add(url)
+        LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(self._persistence.count(), url))
         return url
 
     @staticmethod
@@ -94,13 +88,12 @@ class InfiniteWisdomBot:
 
     def _get_image_url(self) -> str:
         """
-        Pops the oldest image url from the pool
+        Returns a random image url from the persistence
         :return: image url
         """
-        url = self._url_pool.popleft()
-        POOL_SIZE.set(len(self._url_pool))
-        LOGGER.debug('Got image URL from the pool: {}'.format(url))
-        return url
+        entity = self._persistence.get_random()
+        LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
+        return entity.url
 
     @staticmethod
     def _download_image_bytes(url: str) -> bytes:
@@ -164,17 +157,18 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         """
         LOGGER.debug('Inline query')
+
         query = update.inline_query.query
         offset = update.inline_query.offset
-        results = []
-        for url in random.sample(self._url_pool, k=16):
-            results.append(InlineQueryResultPhoto(
-                id=url,
-                photo_url=url,
-                thumb_url=url,
-                photo_height=50,
-                photo_width=50
-            ))
+
+        random_entities = self._persistence.get_random(sample_size=16)
+        results = list(map(lambda x: InlineQueryResultPhoto(
+            id=x.url,
+            photo_url=x.url,
+            thumb_url=x.url,
+            photo_height=50,
+            photo_width=50
+        ), random_entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
 
         if not offset:
