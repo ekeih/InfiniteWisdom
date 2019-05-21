@@ -19,6 +19,7 @@ import os
 import pickle
 import random
 import time
+from collections import deque
 
 from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
 from infinitewisdom.stats import POOL_SIZE
@@ -125,7 +126,7 @@ class LocalPersistence(ImageDataPersistence):
 
     FILE_NAME = "infinitewisdom.pickle"
 
-    _entities = []
+    _entities = deque()
 
     def __init__(self, folder: str = None):
         if folder is None:
@@ -146,14 +147,14 @@ class LocalPersistence(ImageDataPersistence):
         Loads the state from disk
         """
         if not os.path.exists(self._file_path):
-            self._entities = []
+            self._entities = deque()
             return
 
         if not os.path.isfile(self._file_path):
             raise AssertionError("Persistence target is not a file: {}".format(self._file_path))
 
         if not os.path.getsize(self._file_path) > 0:
-            self._entities = []
+            self._entities = deque()
             return
 
         with open(self._file_path, "rb") as file:
@@ -175,7 +176,7 @@ class LocalPersistence(ImageDataPersistence):
             return
 
         entity = Entity(url, text, analyser, time.time())
-        self._entities.append(entity)
+        self._entities.insert(0, entity)
         POOL_SIZE.set(self.count())
         self._save()
 
