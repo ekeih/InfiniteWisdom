@@ -101,10 +101,10 @@ class ImageDataPersistence:
     @staticmethod
     def _contains_words(words: [str], text):
         """
-        Checks if the given text contains at least one of the given words ignoring case
+        Checks if the given text contains all of the given words ignoring case
         :param words: words to check for
         :param text: text to analyse
-        :return: True if the text contains at least one of the given words, false otherwise
+        :return: True if the text contains all of the given words, false otherwise
         """
 
         if text is None:
