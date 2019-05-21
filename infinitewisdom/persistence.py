@@ -19,8 +19,8 @@ import os
 import pickle
 import random
 
-from const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
-from stats import POOL_SIZE
+from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+from infinitewisdom.stats import POOL_SIZE
 
 LOGGER = logging.getLogger(__name__)
 

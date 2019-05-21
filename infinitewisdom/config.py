@@ -19,7 +19,9 @@ import os
 
 import yaml
 
-from const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, CONFIG_NODE_ROOT
+from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
+    CONFIG_NODE_ROOT, \
+    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, PERSISTENCE_TYPE_LOCAL
 
 
 class ConfigEntry:
@@ -74,10 +76,26 @@ class Config:
         ],
         default='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
+    PERSISTENCE_TYPE = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_PERSISTENCE,
+            "type"
+        ],
+        default=PERSISTENCE_TYPE_LOCAL)
+
+    LOCAL_PERSISTENCE_FOLDER_PATH = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_PERSISTENCE,
+            "path"
+        ],
+        default=DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH)
+
     IMAGE_ANALYSIS_TYPE = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
-            "image_analysis",
+            CONFIG_NODE_IMAGE_ANALYSIS,
             "type"
         ],
         default=None)
@@ -85,7 +103,7 @@ class Config:
     IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
-            "image_analysis",
+            CONFIG_NODE_IMAGE_ANALYSIS,
             "auth_file"
         ],
         default=None)

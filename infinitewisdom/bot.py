@@ -23,11 +23,12 @@ from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
-from analysis import GoogleVision, Tesseract
-from config import Config
-from const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
-from persistence import LocalPersistence
-from stats import INSPIRE_TIME, INLINE_TIME, START_TIME
+from infinitewisdom.analysis import GoogleVision, Tesseract
+from infinitewisdom.config import Config
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
+    PERSISTENCE_TYPE_LOCAL
+from infinitewisdom.persistence import LocalPersistence
+from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -41,7 +42,9 @@ class InfiniteWisdomBot:
 
     def __init__(self):
         self._config = Config()
-        self._persistence = LocalPersistence()
+
+        if self._config.PERSISTENCE_TYPE == PERSISTENCE_TYPE_LOCAL:
+            self._persistence = LocalPersistence()
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT:
             self._image_analyser = Tesseract()
