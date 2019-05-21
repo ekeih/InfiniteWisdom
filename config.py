@@ -19,9 +19,16 @@ import os
 
 import yaml
 
-from const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, CONFIG_NODE_ROOT, \
-    CONFIG_NODE_BOT_TOKEN, CONFIG_NODE_GREETING_MESSAGE, CONFIG_NODE_IMAGE_POLLING_TIMEOUT, CONFIG_NODE_URL_POOL_SIZE, \
-    ENV_PARAM_BOT_TOKEN, ENV_PARAM_GREETING_MESSAGE, ENV_PARAM_IMAGE_POLLING_TIMEOUT, ENV_PARAM_URL_POOL_SIZE
+from const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, CONFIG_NODE_ROOT
+
+
+class ConfigEntry:
+
+    def __init__(self, yaml_path: [str], default: any = None):
+        self.yaml_path = yaml_path
+        self.env_key = "_".join(yaml_path).upper()
+        self.default = default
+        self.value = default
 
 
 class Config:
@@ -31,10 +38,52 @@ class Config:
 
     LOGGER = logging.getLogger(__name__)
 
-    BOT_TOKEN = ""
-    URL_POOL_SIZE = 10000
-    IMAGE_POLLING_TIMEOUT = 1
-    GREETING_MESSAGE = 'Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.'
+    BOT_TOKEN = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "bot_token"
+        ],
+        default="")
+
+    URL_POOL_SIZE = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "max_url_pool_size"
+        ],
+        default=10000)
+
+    IMAGE_POLLING_TIMEOUT = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "image_polling_timeout"
+        ],
+        default=1)
+
+    GREETING_MESSAGE = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "greeting_message"
+        ],
+        default='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
+
+    IMAGE_ANALYSIS_TYPE = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "image_analysis",
+            "type"
+        ],
+        default=None)
+
+    IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "image_analysis",
+            "auth_file"
+        ],
+        default=None)
+
+    _config_entries = [BOT_TOKEN, URL_POOL_SIZE, IMAGE_POLLING_TIMEOUT, GREETING_MESSAGE,
+                       IMAGE_ANALYSIS_TYPE, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE]
 
     def __init__(self):
         """
@@ -48,6 +97,16 @@ class Config:
         """
         Reads configuration parameters from a yaml config file (if it exists)
         """
+
+        def _get_value(root: {}, config_entry: ConfigEntry):
+            value = root
+            for key in config_entry.yaml_path:
+                value = value.get(key)
+                if value is None:
+                    return config_entry.value
+
+            return value
+
         file_path = self._find_config_file()
         if file_path is None:
             self.LOGGER.debug("No config file found, skipping.")
@@ -58,11 +117,8 @@ class Config:
             if not cfg or CONFIG_NODE_ROOT not in cfg:
                 return
 
-            root = cfg[CONFIG_NODE_ROOT]
-            self.BOT_TOKEN = root.get(CONFIG_NODE_BOT_TOKEN, self.BOT_TOKEN)
-            self.GREETING_MESSAGE = root.get(CONFIG_NODE_GREETING_MESSAGE, self.GREETING_MESSAGE)
-            self.URL_POOL_SIZE = root.get(CONFIG_NODE_URL_POOL_SIZE, self.URL_POOL_SIZE)
-            self.IMAGE_POLLING_TIMEOUT = root.get(CONFIG_NODE_IMAGE_POLLING_TIMEOUT, self.IMAGE_POLLING_TIMEOUT)
+            for entry in self._config_entries:
+                entry.value = _get_value(cfg, entry)
 
     @staticmethod
     def _find_config_file() -> str or None:
@@ -83,18 +139,16 @@ class Config:
         """
         Reads configuration parameters from environment variables
         """
-        self.BOT_TOKEN = os.environ.get(ENV_PARAM_BOT_TOKEN, self.BOT_TOKEN)
-        self.IMAGE_POLLING_TIMEOUT = os.environ.get(ENV_PARAM_IMAGE_POLLING_TIMEOUT, self.IMAGE_POLLING_TIMEOUT)
-        self.GREETING_MESSAGE = os.environ.get(ENV_PARAM_GREETING_MESSAGE, self.GREETING_MESSAGE)
-        self.URL_POOL_SIZE = os.environ.get(ENV_PARAM_URL_POOL_SIZE, self.URL_POOL_SIZE)
+        for entry in self._config_entries:
+            entry.value = os.environ.get(entry.env_key, entry.value)
 
     def _validate(self):
         """
         Validates the current configuration and throws an exception if something is wrong
         """
-        if len(self.BOT_TOKEN) <= 0:
+        if len(self.BOT_TOKEN.value) <= 0:
             raise AssertionError("Bot token is missing!")
-        if self.IMAGE_POLLING_TIMEOUT < 0:
+        if self.IMAGE_POLLING_TIMEOUT.value < 0:
             raise AssertionError("Image polling timeout must be >= 0!")
-        if self.URL_POOL_SIZE < 0:
+        if self.URL_POOL_SIZE.value < 0:
             raise AssertionError("URL pool size must be >= 0!")

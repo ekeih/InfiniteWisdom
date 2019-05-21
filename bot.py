@@ -23,7 +23,9 @@ from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
+from analysis import GoogleVision, Tesseract
 from config import Config
+from const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
 from persistence import LocalPersistence
 from stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
@@ -40,7 +42,14 @@ class InfiniteWisdomBot:
     def __init__(self):
         self._config = Config()
         self._persistence = LocalPersistence()
-        self._updater = Updater(token=self._config.BOT_TOKEN)
+
+        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT:
+            self._image_analyser = Tesseract()
+        elif self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION:
+            auth_file = self._config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
+            self._image_analyser = GoogleVision(auth_file)
+
+        self._updater = Updater(token=self._config.BOT_TOKEN.value)
 
         self._dispatcher = self._updater.dispatcher
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
@@ -72,6 +81,7 @@ class InfiniteWisdomBot:
         :return: the added url
         """
         url = self._fetch_generated_image_url()
+
         self._persistence.add(url)
         LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(self._persistence.count(), url))
         return url
@@ -115,7 +125,7 @@ class InfiniteWisdomBot:
         """
         self._send_random_quote(bot, update)
         bot.send_message(chat_id=update.message.chat_id,
-                         text=self._config.GREETING_MESSAGE)
+                         text=self._config.GREETING_MESSAGE.value)
 
     def _command_callback(self, bot: Bot, update: Update) -> None:
         """
@@ -187,7 +197,7 @@ class InfiniteWisdomBot:
         """
         for _ in range(count):
             self.add_image_url_to_pool()
-            sleep(self._config.IMAGE_POLLING_TIMEOUT)
+            sleep(self._config.IMAGE_POLLING_TIMEOUT.value)
 
     def _add_quotes_job(self, bot: Bot, update: Update) -> None:
         self._add_quotes(count=300)
