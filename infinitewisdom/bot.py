@@ -107,7 +107,9 @@ class InfiniteWisdomBot:
             analyser = analyser.get_identifier()
 
         self._persistence.add(url, text, analyser)
-        LOGGER.debug('Added image URL to the pool (length: {}): {} "{}"'.format(self._persistence.count(), url, text))
+        LOGGER.debug(
+            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url, analyser,
+                                                                               text))
         return url
 
     def _select_analyser(self):
@@ -115,13 +117,21 @@ class InfiniteWisdomBot:
         Selects an analyser based on it's quality and remaining capacity
         """
 
+        if len(self._image_analysers) == 1:
+            return self._image_analysers[0]
+
         def remaining_capacity(analyser) -> int:
+            """
+            Calculates the remaining capacity of an analyser
+            :param analyser: the analyser to check
+            :return: the remaining capacity of the analyser
+            """
             count = self._persistence.count_items_this_month(analyser.get_identifier())
             remaining = analyser.get_monthly_capacity() - count
             return remaining
 
         available = filter(lambda x: remaining_capacity(x) > 0, self._image_analysers)
-        optimal = sorted(available, key=lambda x: (x.get_quality(), remaining_capacity(x)))[0]
+        optimal = sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
         return optimal
 
     @staticmethod
