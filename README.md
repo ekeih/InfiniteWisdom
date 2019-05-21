@@ -51,7 +51,7 @@ Create a configuration as described in the section above and start
 the bot using:
 
 ```shell
-python ./bot.py
+python ./infinitewisdom/bot.py
 ```
 
 ## Attributions
