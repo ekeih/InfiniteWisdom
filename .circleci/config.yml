@@ -78,6 +78,7 @@ workflows:
       - publish-tag:
           requires:
             - build
+          context: Dockerhub
           filters:
             tags:
               only: /^v.*\..*\..*/
