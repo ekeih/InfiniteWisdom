@@ -59,6 +59,14 @@ class Config:
         ],
         default=1)
 
+    INLINE_BADGE_SIZE = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            "inline_badge_size"
+        ],
+        default=16
+    )
+
     GREETING_MESSAGE = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,

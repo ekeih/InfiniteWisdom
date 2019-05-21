@@ -56,10 +56,12 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
-    def find_by_text(self, text: str = None) -> [Entity]:
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = 0) -> [Entity]:
         """
         Finds a list of entities containing the given text
         :param text: the text to search for
+        :param limit: number of items to return
+        :param offset: item offset
         :return: list of entities
         """
         raise NotImplementedError()
@@ -83,6 +85,25 @@ class ImageDataPersistence:
         Removes all entries from the persistence
         """
         raise NotImplementedError()
+
+    @staticmethod
+    def _contains_words(words: [str], text):
+        """
+        Checks if the given text contains at least one of the given words ignoring case
+        :param words: words to check for
+        :param text: text to analyse
+        :return: True if the text contains at least one of the given words, false otherwise
+        """
+
+        if text is None:
+            return False
+        text = text.lower()
+
+        for word in words:
+            if word.lower() not in text:
+                return False
+
+        return True
 
 
 class LocalPersistence(ImageDataPersistence):
@@ -143,8 +164,14 @@ class LocalPersistence(ImageDataPersistence):
 
         return random.sample(self._entities, k=sample_size)
 
-    def find_by_text(self, text: str = None) -> [Entity]:
-        return list(filter(lambda x: text in x.text, self._entities))
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
+        if limit is None:
+            limit = 16
+        if offset is None:
+            offset = 0
+
+        words = text.split(" ")
+        return list(filter(lambda x: self._contains_words(words, x.text), self._entities))[offset:offset + limit]
 
     def count(self) -> int:
         return len(self._entities)

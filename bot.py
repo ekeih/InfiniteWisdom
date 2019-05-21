@@ -48,6 +48,8 @@ class InfiniteWisdomBot:
         elif self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION:
             auth_file = self._config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
             self._image_analyser = GoogleVision(auth_file)
+        else:
+            self._image_analyser = None
 
         self._updater = Updater(token=self._config.BOT_TOKEN.value)
 
@@ -81,9 +83,14 @@ class InfiniteWisdomBot:
         :return: the added url
         """
         url = self._fetch_generated_image_url()
+        text = None
 
-        self._persistence.add(url)
-        LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(self._persistence.count(), url))
+        if self._image_analyser is not None:
+            image = self._download_image_bytes(url)
+            text = self._image_analyser.find_text(image)
+
+        self._persistence.add(url, text)
+        LOGGER.debug('Added image URL to the pool (length: {}): {} "{}"'.format(self._persistence.count(), url, text))
         return url
 
     @staticmethod
@@ -170,20 +177,31 @@ class InfiniteWisdomBot:
 
         query = update.inline_query.query
         offset = update.inline_query.offset
+        if not offset:
+            offset = 0
+        else:
+            offset = int(offset)
+        badge_size = self._config.INLINE_BADGE_SIZE.value
 
-        random_entities = self._persistence.get_random(sample_size=16)
+        if len(query) > 0:
+            entities = self._persistence.find_by_text(query, badge_size, offset)
+        else:
+            entities = self._persistence.get_random(sample_size=badge_size)
+
         results = list(map(lambda x: InlineQueryResultPhoto(
             id=x.url,
             photo_url=x.url,
             thumb_url=x.url,
             photo_height=50,
             photo_width=50
-        ), random_entities))
+        ), entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
 
-        if not offset:
-            offset = 0
-        new_offset = int(offset) + 16
+        if len(results) > 0:
+            new_offset = offset + badge_size
+        else:
+            new_offset = ''
+
         update.inline_query.answer(
             results,
             next_offset=new_offset
