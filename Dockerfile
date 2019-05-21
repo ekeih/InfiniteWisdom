@@ -1,7 +1,7 @@
 FROM python:3.7-slim-stretch
 
 RUN apt-get update \
-&& apt-get -y install tesseract-ocr tesseract-ocr-eng python-opencv
+&& apt-get -y install tesseract-ocr tesseract-ocr-eng python3-opencv
 
 WORKDIR /app
 
