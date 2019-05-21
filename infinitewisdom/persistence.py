@@ -137,7 +137,7 @@ class LocalPersistence(ImageDataPersistence):
         if not os.path.isdir(folder):
             raise NotADirectoryError("Path is not a folder: {}".format(folder))
 
-        self._file_path = os.path.join(DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, self.FILE_NAME)
+        self._file_path = os.path.join(folder, self.FILE_NAME)
 
         LOGGER.debug("Loading local persistence from: {}".format(self._file_path))
         self._load()
