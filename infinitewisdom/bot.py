@@ -23,9 +23,12 @@ from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
-from config import Config
-from persistence import LocalPersistence
-from stats import INSPIRE_TIME, INLINE_TIME, START_TIME
+from infinitewisdom.analysis import GoogleVision, Tesseract
+from infinitewisdom.config import Config
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
+    PERSISTENCE_TYPE_LOCAL
+from infinitewisdom.persistence import LocalPersistence
+from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -39,8 +42,19 @@ class InfiniteWisdomBot:
 
     def __init__(self):
         self._config = Config()
-        self._persistence = LocalPersistence()
-        self._updater = Updater(token=self._config.BOT_TOKEN)
+
+        if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
+            self._persistence = LocalPersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+
+        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT:
+            self._image_analyser = Tesseract()
+        elif self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION:
+            auth_file = self._config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
+            self._image_analyser = GoogleVision(auth_file)
+        else:
+            self._image_analyser = None
+
+        self._updater = Updater(token=self._config.BOT_TOKEN.value)
 
         self._dispatcher = self._updater.dispatcher
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
@@ -72,8 +86,16 @@ class InfiniteWisdomBot:
         :return: the added url
         """
         url = self._fetch_generated_image_url()
-        self._persistence.add(url)
-        LOGGER.debug('Added image URL to the pool (length: {}): {}'.format(self._persistence.count(), url))
+        text = None
+        analyser = None
+
+        if self._image_analyser is not None:
+            image = self._download_image_bytes(url)
+            text = self._image_analyser.find_text(image)
+            analyser = self._image_analyser.get_identifier()
+
+        self._persistence.add(url, text, analyser)
+        LOGGER.debug('Added image URL to the pool (length: {}): {} "{}"'.format(self._persistence.count(), url, text))
         return url
 
     @staticmethod
@@ -115,7 +137,7 @@ class InfiniteWisdomBot:
         """
         self._send_random_quote(bot, update)
         bot.send_message(chat_id=update.message.chat_id,
-                         text=self._config.GREETING_MESSAGE)
+                         text=self._config.GREETING_MESSAGE.value)
 
     def _command_callback(self, bot: Bot, update: Update) -> None:
         """
@@ -160,20 +182,31 @@ class InfiniteWisdomBot:
 
         query = update.inline_query.query
         offset = update.inline_query.offset
+        if not offset:
+            offset = 0
+        else:
+            offset = int(offset)
+        badge_size = self._config.INLINE_BADGE_SIZE.value
 
-        random_entities = self._persistence.get_random(sample_size=16)
+        if len(query) > 0:
+            entities = self._persistence.find_by_text(query, badge_size, offset)
+        else:
+            entities = self._persistence.get_random(sample_size=badge_size)
+
         results = list(map(lambda x: InlineQueryResultPhoto(
             id=x.url,
             photo_url=x.url,
             thumb_url=x.url,
             photo_height=50,
             photo_width=50
-        ), random_entities))
+        ), entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
 
-        if not offset:
-            offset = 0
-        new_offset = int(offset) + 16
+        if len(results) > 0:
+            new_offset = offset + badge_size
+        else:
+            new_offset = ''
+
         update.inline_query.answer(
             results,
             next_offset=new_offset
@@ -187,7 +220,7 @@ class InfiniteWisdomBot:
         """
         for _ in range(count):
             self.add_image_url_to_pool()
-            sleep(self._config.IMAGE_POLLING_TIMEOUT)
+            sleep(self._config.IMAGE_POLLING_TIMEOUT.value)
 
     def _add_quotes_job(self, bot: Bot, update: Update) -> None:
         self._add_quotes(count=300)

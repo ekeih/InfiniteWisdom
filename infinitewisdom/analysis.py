@@ -20,6 +20,12 @@ class ImageAnalyser:
     Base class for image analysis
     """
 
+    def get_identifier(self) -> str:
+        """
+        :return: an identifier for this analyser
+        """
+        raise NotImplementedError()
+
     def find_text(self, image: bytes) -> str or None:
         """
         Analyses the given image
@@ -44,6 +50,9 @@ class GoogleVision(ImageAnalyser):
         # Instantiates a client
         self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file)
 
+    def get_identifier(self) -> str:
+        return "google-vision"
+
     def find_text(self, image: bytes):
         from google.cloud.vision import types
 
@@ -63,6 +72,9 @@ class Tesseract(ImageAnalyser):
     """
     pytesseract implementation
     """
+
+    def get_identifier(self) -> str:
+        return "tesseract"
 
     def find_text(self, image: bytes):
         try:

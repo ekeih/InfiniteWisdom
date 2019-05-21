@@ -18,9 +18,10 @@ import logging
 import os
 import pickle
 import random
+import time
 
-from const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
-from stats import POOL_SIZE
+from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+from infinitewisdom.stats import POOL_SIZE
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,9 +31,11 @@ class Entity:
     Persistence entity
     """
 
-    def __init__(self, url: str, text: str = None):
+    def __init__(self, url: str, text: str, analyser: str, created: float):
         self.url = url
         self.text = text
+        self.analyser = analyser
+        self.created = created
 
 
 class ImageDataPersistence:
@@ -40,11 +43,12 @@ class ImageDataPersistence:
     Persistence base class
     """
 
-    def add(self, url: str, text: str = None) -> None:
+    def add(self, url: str, text: str = None, analyser: str = None) -> None:
         """
         Persists a new entity
         :param url: the image url
         :param text: the text of the image
+        :param analyser: an identifier for the analyser that was used to detect image text
         """
         raise NotImplementedError()
 
@@ -56,10 +60,20 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
-    def find_by_text(self, text: str = None) -> [Entity]:
+    def find_by_url(self, url: str) -> [Entity]:
+        """
+        Finds a list of entities with exactly the given url
+        :param url: the url to search for
+        :return: list of entities
+        """
+        raise NotImplementedError()
+
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = 0) -> [Entity]:
         """
         Finds a list of entities containing the given text
         :param text: the text to search for
+        :param limit: number of items to return
+        :param offset: item offset
         :return: list of entities
         """
         raise NotImplementedError()
@@ -84,6 +98,25 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    @staticmethod
+    def _contains_words(words: [str], text):
+        """
+        Checks if the given text contains all of the given words ignoring case
+        :param words: words to check for
+        :param text: text to analyse
+        :return: True if the text contains all of the given words, false otherwise
+        """
+
+        if text is None:
+            return False
+        text = text.lower()
+
+        for word in words:
+            if word.lower() not in text:
+                return False
+
+        return True
+
 
 class LocalPersistence(ImageDataPersistence):
     """
@@ -94,11 +127,16 @@ class LocalPersistence(ImageDataPersistence):
 
     _entities = []
 
-    def __init__(self, file_path: str = None):
-        if file_path is not None:
-            self._file_path = file_path
-        else:
-            self._file_path = os.path.join(DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, self.FILE_NAME)
+    def __init__(self, folder: str = None):
+        if folder is None:
+            folder = DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+
+        if not os.path.exists(folder):
+            raise FileNotFoundError("Path does not exist: {}".format(folder))
+        if not os.path.isdir(folder):
+            raise NotADirectoryError("Path is not a folder: {}".format(folder))
+
+        self._file_path = os.path.join(DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, self.FILE_NAME)
 
         LOGGER.debug("Loading local persistence from: {}".format(self._file_path))
         self._load()
@@ -131,8 +169,12 @@ class LocalPersistence(ImageDataPersistence):
         with open(self._file_path, "wb") as file:
             pickle.dump(self._entities, file)
 
-    def add(self, url: str, text: str = None) -> None:
-        entity = Entity(url, text)
+    def add(self, url: str, text: str = None, analyser: str = None) -> None:
+        if len(self.find_by_url(url)) > 0:
+            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
+            return
+
+        entity = Entity(url, text, analyser, time.time())
         self._entities.append(entity)
         POOL_SIZE.set(self.count())
         self._save()
@@ -143,8 +185,17 @@ class LocalPersistence(ImageDataPersistence):
 
         return random.sample(self._entities, k=sample_size)
 
-    def find_by_text(self, text: str = None) -> [Entity]:
-        return list(filter(lambda x: text in x.text, self._entities))
+    def find_by_url(self, url: str) -> [Entity]:
+        return list(filter(lambda x: x.url == url, self._entities))
+
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
+        if limit is None:
+            limit = 16
+        if offset is None:
+            offset = 0
+
+        words = text.split(" ")
+        return list(filter(lambda x: self._contains_words(words, x.text), self._entities))[offset:offset + limit]
 
     def count(self) -> int:
         return len(self._entities)
