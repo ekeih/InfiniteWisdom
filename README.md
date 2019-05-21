@@ -12,10 +12,14 @@ will always override the value provided in the yaml file.
 
 | Name                        | Description                              | Type     | Default                                |
 |-----------------------------|------------------------------------------|----------|----------------------------------------|
-| BOT_TOKEN                   | The bot token used to authenticate the bot with telegram | String | `-` |
-| URL_POOL_SIZE               | Maximum number of URLs to keep in the pool | Integer | `10000` |
-| IMAGE_POLLING_TIMEOUT       | Timeout in seconds between image api requests | Integer | `1` |
-| GREETING_MESSAGE           | Specifies the message a new user is greeted with | String| `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
+| INFINITEWISDOM_BOT_TOKEN                   | The bot token used to authenticate the bot with telegram | String | `-` |
+| INFINITEWISDOM_MAX_URL_POOL_SIZE           | Maximum number of URLs to keep in the pool | Integer | `10000` |
+| INFINITEWISDOM_IMAGE_POLLING_TIMEOUT       | Timeout in seconds between image api requests | Integer | `1` |
+| INFINITEWISDOM_GREETING_MESSAGE            | Specifies the message a new user is greeted with | String | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
+| INFINITEWISDOM_INLINE_BADGE_SIZE           | Number of items to return in a single inline request badge | Integer | `16` |
+| INFINITEWISDOM_PERSISTENCE_TYPE            | Type of persistence to use | String | `local` |
+| INFINITEWISDOM_PERSISTENCE_PATH            | Path of local persistence | String | `/tmp` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_TYPE         | Type of image analysis to use | String | `None` |
 
 ### yaml file
 
@@ -29,10 +33,16 @@ and looks like this:
 
 ```yaml
 InfiniteWisdom:
-  bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
   greeting_message: "Hi there!"
   max_url_pool_size: 10000
   image_polling_timeout: 1
+  inline_badge_size: 16
+  bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+  persistence:
+    type: "local"
+    path: "/tmp"
+  image_analysis:
+    type: "tesseract"
 ```
 
 ## Usage
