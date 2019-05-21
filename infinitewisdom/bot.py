@@ -87,12 +87,14 @@ class InfiniteWisdomBot:
         """
         url = self._fetch_generated_image_url()
         text = None
+        analyser = None
 
         if self._image_analyser is not None:
             image = self._download_image_bytes(url)
             text = self._image_analyser.find_text(image)
+            analyser = self._image_analyser.get_identifier()
 
-        self._persistence.add(url, text)
+        self._persistence.add(url, text, analyser)
         LOGGER.debug('Added image URL to the pool (length: {}): {} "{}"'.format(self._persistence.count(), url, text))
         return url
 

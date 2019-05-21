@@ -18,6 +18,7 @@ import logging
 import os
 import pickle
 import random
+import time
 
 from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
 from infinitewisdom.stats import POOL_SIZE
@@ -30,9 +31,11 @@ class Entity:
     Persistence entity
     """
 
-    def __init__(self, url: str, text: str = None):
+    def __init__(self, url: str, text: str, analyser: str, created: float):
         self.url = url
         self.text = text
+        self.analyser = analyser
+        self.created = created
 
 
 class ImageDataPersistence:
@@ -40,11 +43,12 @@ class ImageDataPersistence:
     Persistence base class
     """
 
-    def add(self, url: str, text: str = None) -> None:
+    def add(self, url: str, text: str = None, analyser: str = None) -> None:
         """
         Persists a new entity
         :param url: the image url
         :param text: the text of the image
+        :param analyser: an identifier for the analyser that was used to detect image text
         """
         raise NotImplementedError()
 
@@ -165,12 +169,12 @@ class LocalPersistence(ImageDataPersistence):
         with open(self._file_path, "wb") as file:
             pickle.dump(self._entities, file)
 
-    def add(self, url: str, text: str = None) -> None:
+    def add(self, url: str, text: str = None, analyser: str = None) -> None:
         if len(self.find_by_url(url)) > 0:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return
 
-        entity = Entity(url, text)
+        entity = Entity(url, text, analyser, time.time())
         self._entities.append(entity)
         POOL_SIZE.set(self.count())
         self._save()
