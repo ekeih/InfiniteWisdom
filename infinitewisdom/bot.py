@@ -90,20 +90,23 @@ class InfiniteWisdomBot:
         :return: the added url
         """
         url = self._fetch_generated_image_url()
-        text = None
-        analyser = None
 
+        analyser_id = None
+        analyser_quality = None
+        text = None
         if len(self._image_analysers) > 0:
             image = self._download_image_bytes(url)
 
             analyser = self._select_analyser()
+            analyser_id = analyser.get_identifier()
+            analyser_quality = analyser.get_quality()
 
             text = analyser.find_text(image)
-            analyser = analyser.get_identifier()
 
-        self._persistence.add(url, text, analyser)
+        self._persistence.add(url, text, analyser_id, analyser_quality)
         LOGGER.debug(
-            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url, analyser,
+            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
+                                                                               analyser_id,
                                                                                text))
         return url
 
