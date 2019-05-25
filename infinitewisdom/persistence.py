@@ -32,8 +32,10 @@ class Entity:
     Persistence entity
     """
 
-    def __init__(self, url: str, text: str, analyser: str, created: float):
+    def __init__(self, url: str, telegram_file_id: str or None, text: str or None, analyser: str or None,
+                 created: float):
         self.url = url
+        self.telegram_file_id = telegram_file_id
         self.text = text
         self.analyser = analyser
         self.created = created
@@ -44,12 +46,14 @@ class ImageDataPersistence:
     Persistence base class
     """
 
-    def add(self, url: str, text: str = None, analyser: str = None) -> None:
+    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None) -> bool:
         """
         Persists a new entity
         :param url: the image url
+        :param telegram_file_id: file id of this image on telegram servers
         :param text: the text of the image
         :param analyser: an identifier for the analyser that was used to detect image text
+        :return: true when the entity was added, false otherwise
         """
         raise NotImplementedError()
 
@@ -83,6 +87,13 @@ class ImageDataPersistence:
         """
         Returns the total number of entities stored in this persistence
         :return: total count
+        """
+        raise NotImplementedError()
+
+    def update(self, entity: Entity) -> None:
+        """
+        Updates the given entity
+        :param entity: the entity with modified fields
         """
         raise NotImplementedError()
 
@@ -170,15 +181,16 @@ class LocalPersistence(ImageDataPersistence):
         with open(self._file_path, "wb") as file:
             pickle.dump(self._entities, file)
 
-    def add(self, url: str, text: str = None, analyser: str = None) -> None:
+    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None) -> bool:
         if len(self.find_by_url(url)) > 0:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
-            return
+            return False
 
-        entity = Entity(url, text, analyser, time.time())
+        entity = Entity(url, telegram_file_id, text, analyser, time.time())
         self._entities.insert(0, entity)
         POOL_SIZE.set(self.count())
         self._save()
+        return True
 
     def get_random(self, sample_size: int = None) -> Entity or [Entity]:
         if sample_size is None:
@@ -200,6 +212,18 @@ class LocalPersistence(ImageDataPersistence):
 
     def count(self) -> int:
         return len(self._entities)
+
+    def update(self, entity: Entity) -> None:
+        old_entity = self.find_by_url(entity.url)[0]
+
+        if old_entity is None:
+            LOGGER.warning("No entity found for URL: {}".format(entity.url))
+            return
+
+        old_entity.telegram_file_id = entity.telegram_file_id
+        old_entity.text = entity.text
+        old_entity.analyser = entity.analyser
+        self._save()
 
     def delete(self, url: str):
         self._entities = list(filter(lambda x: x.url is not url, self._entities))
