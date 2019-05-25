@@ -179,3 +179,13 @@ class Config:
             raise AssertionError("Image polling timeout must be >= 0!")
         if self.URL_POOL_SIZE.value < 0:
             raise AssertionError("URL pool size must be >= 0!")
+
+        if not os.path.exists(self.LOCAL_PERSISTENCE_FOLDER_PATH):
+            raise FileNotFoundError(
+                "Local persistence path does not exist: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH))
+        if not os.path.isdir(self.LOCAL_PERSISTENCE_FOLDER_PATH):
+            raise NotADirectoryError(
+                "Local persistence path is not a folder: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH))
+
+        if not os.path.isfile(self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE):
+            raise IsADirectoryError("Google Vision Auth file path is not a file!")

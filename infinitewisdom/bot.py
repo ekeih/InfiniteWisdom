@@ -57,11 +57,6 @@ class InfiniteWisdomBot:
             auth_file = self._config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
             if os.path.isfile(auth_file):
                 self._image_analysers.append(GoogleVision(auth_file))
-            elif os.path.isdir(auth_file):
-                for file_name in os.listdir(auth_file):
-                    file_path = os.path.join(auth_file, file_name)
-                    if os.path.isfile(file_path) and file_name.endswith(".json"):
-                        self._image_analysers.append(GoogleVision(file_path))
 
         self._updater = Updater(token=self._config.BOT_TOKEN.value)
 

@@ -68,7 +68,7 @@ class GoogleVision(ImageAnalyser):
         self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file_path)
 
     def get_identifier(self) -> str:
-        return "google-vision_{}".format(self._auth_id)
+        return "google-vision"
 
     def get_quality(self) -> float:
         return 0.9

@@ -11,6 +11,7 @@ InfiniteWisdom:
     path: "/tmp"
   image_analysis:
     type: "tesseract"
-    auth_file: "./my-auth-file.json"
+#    type: "google-vision"
+#    auth_file: "./my-auth-file.json"
 
 ...
