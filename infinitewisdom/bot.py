@@ -153,7 +153,7 @@ class InfiniteWisdomBot:
         entity = self._persistence.get_random()
         LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
 
-        if entity.telegram_file_id is None:
+        if not hasattr(entity, 'telegram_file_id') or entity.telegram_file_id is None:
             image_bytes = self._download_image_bytes(entity.url)
             file_id = self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
             entity.telegram_file_id = file_id
@@ -224,7 +224,7 @@ class InfiniteWisdomBot:
         :param entity: the entity to use
         :return: inline result object
         """
-        if entity.telegram_file_id is not None:
+        if hasattr(entity, 'telegram_file_id') and entity.telegram_file_id is not None:
             return InlineQueryResultCachedPhoto(
                 id=entity.url,
                 photo_file_id=str(entity.telegram_file_id),
