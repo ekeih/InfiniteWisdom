@@ -20,14 +20,14 @@ from time import sleep
 
 import requests
 from prometheus_client import start_http_server
-from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
+from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_LOCAL
-from infinitewisdom.persistence import LocalPersistence
+from infinitewisdom.persistence import LocalPersistence, Entity
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -180,7 +180,7 @@ class InfiniteWisdomBot:
             raise ValueError("At least one of file_id and image_data has to be provided!")
 
         message = bot.send_photo(chat_id=chat_id, photo=photo)
-        return message.photo[-1]
+        return message.photo[-1].file_id
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, bot: Bot, update: Update) -> None:
@@ -204,13 +204,7 @@ class InfiniteWisdomBot:
         else:
             entities = self._persistence.get_random(sample_size=badge_size)
 
-        results = list(map(lambda x: InlineQueryResultPhoto(
-            id=x.url,
-            photo_url=x.url,
-            thumb_url=x.url,
-            photo_height=50,
-            photo_width=50
-        ), entities))
+        results = list(map(lambda x: self._entity_to_inline_query_result(x), entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
 
         if len(results) > 0:
@@ -222,6 +216,27 @@ class InfiniteWisdomBot:
             results,
             next_offset=new_offset
         )
+
+    @staticmethod
+    def _entity_to_inline_query_result(entity: Entity):
+        """
+        Creates a telegram inline query result object for the given entity
+        :param entity: the entity to use
+        :return: inline result object
+        """
+        if entity.telegram_file_id is not None:
+            return InlineQueryResultCachedPhoto(
+                id=entity.url,
+                photo_file_id=str(entity.telegram_file_id),
+            )
+        else:
+            return InlineQueryResultPhoto(
+                id=entity.url,
+                photo_url=entity.url,
+                thumb_url=entity.url,
+                photo_height=50,
+                photo_width=50
+            )
 
     def _add_quotes(self, count: int = 300) -> None:
         """
