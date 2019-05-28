@@ -38,7 +38,7 @@ class ImageAnalyser:
         """
         :return: the number of items per month that can be analysed by this analyser
         """
-        return math.inf
+        raise NotImplementedError()
 
     def find_text(self, image: bytes) -> str or None:
         """
@@ -101,6 +101,9 @@ class Tesseract(ImageAnalyser):
 
     def get_quality(self) -> float:
         return 0.25
+
+    def get_monthly_capacity(self):
+        return math.inf
 
     def find_text(self, image: bytes):
         try:
