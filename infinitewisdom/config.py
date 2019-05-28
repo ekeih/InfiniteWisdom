@@ -180,13 +180,16 @@ class Config:
         if self.URL_POOL_SIZE.value < 0:
             raise AssertionError("URL pool size must be >= 0!")
 
-        if not os.path.exists(self.LOCAL_PERSISTENCE_FOLDER_PATH.value):
-            raise FileNotFoundError(
-                "Local persistence path does not exist: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH.value))
-        if not os.path.isdir(self.LOCAL_PERSISTENCE_FOLDER_PATH.value):
-            raise NotADirectoryError(
-                "Local persistence path is not a folder: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH.value))
+        if self.LOCAL_PERSISTENCE_FOLDER_PATH.value is not None:
+            if not os.path.exists(self.LOCAL_PERSISTENCE_FOLDER_PATH.value):
+                raise FileNotFoundError(
+                    "Local persistence path does not exist: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH.value))
+            if not os.path.isdir(self.LOCAL_PERSISTENCE_FOLDER_PATH.value):
+                raise NotADirectoryError(
+                    "Local persistence path is not a folder: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH.value))
 
-        if not os.path.isfile(self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value):
-            raise IsADirectoryError("Google Vision Auth file path is not a file: {}".format(
-                self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value))
+        if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is not None:
+            if not os.path.isfile(
+                    self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value):
+                raise IsADirectoryError("Google Vision Auth file path is not a file: {}".format(
+                    self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value))
