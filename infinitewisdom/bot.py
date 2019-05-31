@@ -21,14 +21,14 @@ from time import sleep
 
 import requests
 from prometheus_client import start_http_server
-from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update
+from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 
 from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
-from infinitewisdom.persistence import LocalPersistence
+from infinitewisdom.persistence import LocalPersistence, Entity
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -84,26 +84,29 @@ class InfiniteWisdomBot:
         """
         self._updater.stop()
 
-    def add_image_url_to_pool(self) -> str:
+    def add_image_url_to_pool(self) -> str or None:
         """
         Requests a new image url and adds it to the pool
         :return: the added url
         """
         url = self._fetch_generated_image_url()
 
+        if len(self._persistence.find_by_url(url)) > 0:
+            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
+            return None
+
         analyser_id = None
         analyser_quality = None
         text = None
         if len(self._image_analysers) > 0:
             image = self._download_image_bytes(url)
-
             analyser = self._select_analyser()
             analyser_id = analyser.get_identifier()
             analyser_quality = analyser.get_quality()
 
             text = analyser.find_text(image)
 
-        self._persistence.add(url, text, analyser_id, analyser_quality)
+        self._persistence.add(url, None, text, analyser_id, analyser_quality)
         LOGGER.debug(
             'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
                                                                                analyser_id,
@@ -141,15 +144,6 @@ class InfiniteWisdomBot:
         url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
         url_page.raise_for_status()
         return url_page.text
-
-    def _get_image_url(self) -> str:
-        """
-        Returns a random image url from the persistence
-        :return: image url
-        """
-        entity = self._persistence.get_random()
-        LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
-        return entity.url
 
     @staticmethod
     def _download_image_bytes(url: str) -> bytes:
@@ -189,21 +183,37 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         """
         bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
-        image_url = self._get_image_url()
-        image_bytes = self._download_image_bytes(image_url)
-        self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
+        entity = self._persistence.get_random()
+        LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
+
+        if not hasattr(entity, 'telegram_file_id') or entity.telegram_file_id is None:
+            image_bytes = self._download_image_bytes(entity.url)
+            file_id = self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
+            entity.telegram_file_id = file_id
+            self._persistence.update(entity)
+        else:
+            self._send_photo(bot=bot, chat_id=update.message.chat_id, file_id=entity.telegram_file_id)
 
     @staticmethod
-    def _send_photo(bot: Bot, chat_id: str, image_data: bytes) -> None:
+    def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None) -> int:
         """
         Sends a photo to the given chat
         :param bot: the bot
         :param chat_id: the chat id to send the image to
         :param image_data: the image data
+        :return: telegram message id
         """
-        image_bytes_io = BytesIO(image_data)
-        image_bytes_io.name = 'inspireme.jpeg'
-        bot.send_photo(chat_id=chat_id, photo=image_bytes_io)
+        if image_data is not None:
+            image_bytes_io = BytesIO(image_data)
+            image_bytes_io.name = 'inspireme.jpeg'
+            photo = image_bytes_io
+        elif file_id is not None:
+            photo = file_id
+        else:
+            raise ValueError("At least one of file_id and image_data has to be provided!")
+
+        message = bot.send_photo(chat_id=chat_id, photo=photo)
+        return message.photo[-1].file_id
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, bot: Bot, update: Update) -> None:
@@ -227,13 +237,7 @@ class InfiniteWisdomBot:
         else:
             entities = self._persistence.get_random(sample_size=badge_size)
 
-        results = list(map(lambda x: InlineQueryResultPhoto(
-            id=x.url,
-            photo_url=x.url,
-            thumb_url=x.url,
-            photo_height=50,
-            photo_width=50
-        ), entities))
+        results = list(map(lambda x: self._entity_to_inline_query_result(x), entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
 
         if len(results) > 0:
@@ -245,6 +249,27 @@ class InfiniteWisdomBot:
             results,
             next_offset=new_offset
         )
+
+    @staticmethod
+    def _entity_to_inline_query_result(entity: Entity):
+        """
+        Creates a telegram inline query result object for the given entity
+        :param entity: the entity to use
+        :return: inline result object
+        """
+        if hasattr(entity, 'telegram_file_id') and entity.telegram_file_id is not None:
+            return InlineQueryResultCachedPhoto(
+                id=entity.url,
+                photo_file_id=str(entity.telegram_file_id),
+            )
+        else:
+            return InlineQueryResultPhoto(
+                id=entity.url,
+                photo_url=entity.url,
+                thumb_url=entity.url,
+                photo_height=50,
+                photo_width=50
+            )
 
     def _add_quotes(self, count: int = 300) -> None:
         """
