@@ -35,11 +35,11 @@ class Entity:
     def __init__(self, url: str, telegram_file_id: str or None, text: str, analyser: str, analyser_quality: float,
                  created: float):
         self.url = url
-        self.telegram_file_id = telegram_file_id
         self.text = text
         self.analyser = analyser
         self.analyser_quality = analyser_quality
         self.created = created
+        self.telegram_file_id = telegram_file_id
 
 
 class ImageDataPersistence:
@@ -47,7 +47,8 @@ class ImageDataPersistence:
     Persistence base class
     """
 
-    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None, analyser_quality: float = None) -> bool:
+    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None,
+            analyser_quality: float = None) -> bool:
         """
         Persists a new entity
         :param url: the image url
@@ -191,7 +192,8 @@ class LocalPersistence(ImageDataPersistence):
         with open(self._file_path, "wb") as file:
             pickle.dump(self._entities, file)
 
-    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None, analyser_quality: float = None) -> bool:
+    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None,
+            analyser_quality: float = None) -> bool:
         if len(self.find_by_url(url)) > 0:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return False

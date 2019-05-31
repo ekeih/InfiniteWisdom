@@ -95,7 +95,6 @@ class InfiniteWisdomBot:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return None
 
-
         analyser_id = None
         analyser_quality = None
         text = None
@@ -107,7 +106,7 @@ class InfiniteWisdomBot:
 
             text = analyser.find_text(image)
 
-        self._persistence.add(url, text, analyser_id, analyser_quality)
+        self._persistence.add(url, None, text, analyser_id, analyser_quality)
         LOGGER.debug(
             'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
                                                                                analyser_id,
