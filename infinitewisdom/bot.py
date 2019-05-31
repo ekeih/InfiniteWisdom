@@ -22,7 +22,7 @@ from time import sleep
 import requests
 from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
-from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
+from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
 
 from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
@@ -64,6 +64,7 @@ class InfiniteWisdomBot:
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
         self._dispatcher.add_handler(InlineQueryHandler(self._inline_query_callback))
         self._dispatcher.add_handler(MessageHandler(Filters.command, self._command_callback))
+        self._dispatcher.add_handler(ChosenInlineResultHandler(self._inline_result_callback))
 
     def start(self):
         """
@@ -249,6 +250,9 @@ class InfiniteWisdomBot:
             results,
             next_offset=new_offset
         )
+
+    def _inline_result_callback(self, bot: Bot, update: Update):
+        pass
 
     @staticmethod
     def _entity_to_inline_query_result(entity: Entity):
