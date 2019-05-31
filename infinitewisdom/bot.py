@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+import os
 from io import BytesIO
 from time import sleep
 
@@ -26,7 +27,7 @@ from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHan
 from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
-    PERSISTENCE_TYPE_LOCAL
+    PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
 from infinitewisdom.persistence import LocalPersistence, Entity
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME
 
@@ -40,19 +41,22 @@ class InfiniteWisdomBot:
     The main entry class of the InfiniteWisdom telegram bot
     """
 
+    _image_analysers = []
+
     def __init__(self):
         self._config = Config()
 
         if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
             self._persistence = LocalPersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
 
-        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT:
-            self._image_analyser = Tesseract()
-        elif self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION:
+        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
+                or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
+            self._image_analysers.append(Tesseract())
+        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION \
+                or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
             auth_file = self._config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
-            self._image_analyser = GoogleVision(auth_file)
-        else:
-            self._image_analyser = None
+            if os.path.isfile(auth_file):
+                self._image_analysers.append(GoogleVision(auth_file))
 
         self._updater = Updater(token=self._config.BOT_TOKEN.value)
 
@@ -91,16 +95,46 @@ class InfiniteWisdomBot:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return None
 
-        text = None
-        analyser = None
-        if self._image_analyser is not None:
-            image = self._download_image_bytes(url)
-            text = self._image_analyser.find_text(image)
-            analyser = self._image_analyser.get_identifier()
 
-        self._persistence.add(url, None, text, analyser)
-        LOGGER.debug('Added image URL to the pool (length: {}): {} "{}"'.format(self._persistence.count(), url, text))
+        analyser_id = None
+        analyser_quality = None
+        text = None
+        if len(self._image_analysers) > 0:
+            image = self._download_image_bytes(url)
+            analyser = self._select_analyser()
+            analyser_id = analyser.get_identifier()
+            analyser_quality = analyser.get_quality()
+
+            text = analyser.find_text(image)
+
+        self._persistence.add(url, text, analyser_id, analyser_quality)
+        LOGGER.debug(
+            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
+                                                                               analyser_id,
+                                                                               text))
         return url
+
+    def _select_analyser(self):
+        """
+        Selects an analyser based on it's quality and remaining capacity
+        """
+
+        if len(self._image_analysers) == 1:
+            return self._image_analysers[0]
+
+        def remaining_capacity(analyser) -> int:
+            """
+            Calculates the remaining capacity of an analyser
+            :param analyser: the analyser to check
+            :return: the remaining capacity of the analyser
+            """
+            count = self._persistence.count_items_this_month(analyser.get_identifier())
+            remaining = analyser.get_monthly_capacity() - count
+            return remaining
+
+        available = filter(lambda x: remaining_capacity(x) > 0, self._image_analysers)
+        optimal = sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
+        return optimal
 
     @staticmethod
     def _fetch_generated_image_url() -> str:
