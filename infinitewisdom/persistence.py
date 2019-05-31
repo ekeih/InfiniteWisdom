@@ -32,8 +32,8 @@ class Entity:
     Persistence entity
     """
 
-    def __init__(self, url: str, telegram_file_id: str or None, text: str, analyser: str, analyser_quality: float,
-                 created: float):
+    def __init__(self, url: str, text: str, analyser: str, analyser_quality: float, created: float,
+                 telegram_file_id: str or None):
         self.url = url
         self.text = text
         self.analyser = analyser
@@ -198,7 +198,7 @@ class LocalPersistence(ImageDataPersistence):
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return False
 
-        entity = Entity(url, telegram_file_id, text, analyser, analyser_quality, time.time())
+        entity = Entity(url, text, analyser, analyser_quality, time.time(), telegram_file_id)
         self._entities.insert(0, entity)
         POOL_SIZE.set(self.count())
         self._save()
