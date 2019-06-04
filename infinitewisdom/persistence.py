@@ -22,7 +22,7 @@ import time
 from collections import deque
 
 from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
-from infinitewisdom.stats import POOL_SIZE
+from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +68,16 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    def query(self, condition: callable, limit: int = None, offset: int = None) -> [Entity]:
+        """
+        Finds a list of entities that match the condition
+        :param condition: condition to check
+        :param limit: number of items to return (defaults to None)
+        :param offset: item offset (defaults to 0)
+        :return: list of entities
+        """
+        raise NotImplementedError()
+
     def find_by_url(self, url: str) -> [Entity]:
         """
         Finds a list of entities with exactly the given url
@@ -76,11 +86,11 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
-    def find_by_text(self, text: str = None, limit: int = None, offset: int = 0) -> [Entity]:
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         """
         Finds a list of entities containing the given text
         :param text: the text to search for
-        :param limit: number of items to return
+        :param limit: number of items to return (defaults to 16)
         :param offset: item offset
         :return: list of entities
         """
@@ -182,7 +192,7 @@ class LocalPersistence(ImageDataPersistence):
         with open(self._file_path, "rb") as file:
             self._entities = pickle.load(file)
 
-        POOL_SIZE.set(self.count())
+        self._update_stats()
         LOGGER.debug("Local persistence loaded: {} entities".format(len(self._entities)))
 
     def _save(self) -> None:
@@ -200,8 +210,8 @@ class LocalPersistence(ImageDataPersistence):
 
         entity = Entity(url, text, analyser, analyser_quality, time.time(), telegram_file_id)
         self._entities.insert(0, entity)
-        POOL_SIZE.set(self.count())
         self._save()
+        self._update_stats()
         return True
 
     def get_random(self, sample_size: int = None) -> Entity or [Entity]:
@@ -210,24 +220,35 @@ class LocalPersistence(ImageDataPersistence):
 
         return random.sample(self._entities, k=sample_size)
 
+    def query(self, condition: callable, limit: int = None, offset: int = None):
+        if limit is None:
+            limit = self.count()
+
+        if offset is None:
+            offset = 0
+
+        start = offset
+        end = offset + limit
+
+        entities = list(filter(lambda x: condition(x), self._entities))
+        return entities[start:end]
+
     def find_by_url(self, url: str) -> [Entity]:
-        return list(filter(lambda x: x.url == url, self._entities))
+        return self.query(lambda x: x.url == url)
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         if limit is None:
             limit = 16
-        if offset is None:
-            offset = 0
 
         words = text.split(" ")
-        return list(filter(lambda x: self._contains_words(words, x.text), self._entities))[offset:offset + limit]
+        return self.query(lambda x: self._contains_words(words, x.text), limit, offset)
 
     def count(self) -> int:
         return len(self._entities)
 
     def count_items_this_month(self, analyser: str) -> int:
-        return len(list(
-            filter(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 31), self._entities)))
+        items = self.query(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 31))
+        return len(items)
 
     def update(self, entity: Entity) -> None:
         old_entity = self.find_by_url(entity.url)[0]
@@ -240,13 +261,19 @@ class LocalPersistence(ImageDataPersistence):
         old_entity.text = entity.text
         old_entity.analyser = entity.analyser
         self._save()
+        self._update_stats()
 
     def delete(self, url: str):
-        self._entities = list(filter(lambda x: x.url is not url, self._entities))
-        POOL_SIZE.set(self.count())
+        self._entities = self.query(lambda x: x.url is not url)
         self._save()
+        self._update_stats()
 
     def clear(self) -> None:
         self._entities.clear()
-        POOL_SIZE.set(self.count())
         self._save()
+        self._update_stats()
+
+    def _update_stats(self):
+        POOL_SIZE.set(self.count())
+        uploaded_entites_count = len(self.query(lambda x: x.telegram_file_id is not None))
+        TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
