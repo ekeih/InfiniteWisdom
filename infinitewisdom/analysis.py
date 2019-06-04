@@ -68,7 +68,8 @@ class GoogleVision(ImageAnalyser):
         self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file_path)
 
     def get_identifier(self) -> str:
-        return "google-vision"
+        from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
+        return IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
 
     def get_quality(self) -> float:
         return 0.9
@@ -97,7 +98,8 @@ class Tesseract(ImageAnalyser):
     """
 
     def get_identifier(self) -> str:
-        return "tesseract"
+        from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT
+        return IMAGE_ANALYSIS_TYPE_TESSERACT
 
     def get_quality(self) -> float:
         return 0.25

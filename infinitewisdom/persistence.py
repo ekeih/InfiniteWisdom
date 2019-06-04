@@ -21,8 +21,10 @@ import random
 import time
 from collections import deque
 
-from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
-from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT
+from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, IMAGE_ANALYSIS_TYPE_TESSERACT, \
+    IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
+from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_TESSERACT_COUNT, \
+    IMAGE_ANALYSIS_TYPE_GOOGLE_VISION_COUNT, IMAGE_ANALYSIS_HAS_TEXT_COUNT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -278,3 +280,15 @@ class LocalPersistence(ImageDataPersistence):
         uploaded_entites_count = len(
             self.query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
         TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
+
+        tesseract_entites_count = len(
+            self.query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_TESSERACT))
+        IMAGE_ANALYSIS_TYPE_TESSERACT_COUNT.set(tesseract_entites_count)
+
+        google_vision_entites_count = len(
+            self.query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION))
+        IMAGE_ANALYSIS_TYPE_GOOGLE_VISION_COUNT.set(google_vision_entites_count)
+
+        entities_with_text_count = len(
+            self.query(lambda x: x.text is not None and len(x.text) > 0))
+        IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)
