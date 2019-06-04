@@ -275,5 +275,6 @@ class LocalPersistence(ImageDataPersistence):
 
     def _update_stats(self):
         POOL_SIZE.set(self.count())
-        uploaded_entites_count = len(self.query(lambda x: x.telegram_file_id is not None))
+        uploaded_entites_count = len(
+            self.query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
         TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
