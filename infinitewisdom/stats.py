@@ -1,6 +1,8 @@
 from prometheus_client import Gauge, Counter, Summary
 
 POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
+TELEGRAM_ENTITIES_COUNT = Gauge('telegram_entities_count',
+                                'Number of items that have been uploaded to telegram servers')
 START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
