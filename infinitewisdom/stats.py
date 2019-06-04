@@ -3,7 +3,7 @@ from prometheus_client import Gauge, Counter, Summary
 POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
 TELEGRAM_ENTITIES_COUNT = Gauge('telegram_entities_count',
                                 'Number of items that have been uploaded to telegram servers')
-IMAGE_ANALYSIS_TYPE_COUNT = Gauge('image_analysis_type_tesseract_count',
+IMAGE_ANALYSIS_TYPE_COUNT = Gauge('image_analysis_type_count',
                                   'Number of entities that have been analysed by a specific analyser',
                                   ['type'])
 IMAGE_ANALYSIS_HAS_TEXT_COUNT = Gauge('image_analysis_has_text_count',
