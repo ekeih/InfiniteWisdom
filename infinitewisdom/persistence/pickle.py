@@ -20,11 +20,8 @@ import random
 import time
 from collections import deque
 
-from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, IMAGE_ANALYSIS_TYPE_TESSERACT, \
-    IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
+from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
 from infinitewisdom.persistence import ImageDataPersistence, Entity
-from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
-    IMAGE_ANALYSIS_HAS_TEXT_COUNT
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,14 +77,13 @@ class PicklePersistence(ImageDataPersistence):
         with open(self._file_path, "wb") as file:
             pickle.dump(self._entities, file)
 
-    def add(self, entity: Entity) -> bool:
+    def _add(self, entity: Entity) -> bool:
         if len(self.find_by_url(entity.url)) > 0:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
             return False
 
         self._entities.insert(0, entity)
         self._save()
-        self._update_stats()
         return True
 
     def get_random(self, sample_size: int = None) -> Entity or [Entity]:
@@ -134,7 +130,7 @@ class PicklePersistence(ImageDataPersistence):
         items = self._query(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 31))
         return len(items)
 
-    def update(self, entity: Entity) -> None:
+    def _update(self, entity: Entity) -> None:
         old_entity = self.find_by_url(entity.url)[0]
 
         if old_entity is None:
@@ -145,32 +141,20 @@ class PicklePersistence(ImageDataPersistence):
         old_entity.text = entity.text
         old_entity.analyser = entity.analyser
         self._save()
-        self._update_stats()
 
-    def delete(self, url: str):
+    def _delete(self, url: str):
         self._entities = self._query(lambda x: x.url is not url)
         self._save()
-        self._update_stats()
 
-    def clear(self) -> None:
+    def _clear(self) -> None:
         self._entities.clear()
         self._save()
-        self._update_stats()
 
-    def _update_stats(self):
-        POOL_SIZE.set(self.count())
-        uploaded_entites_count = len(
-            self._query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
-        TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
+    def count_items_with_telegram_upload(self) -> int:
+        return len(self._query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
 
-        tesseract_entites_count = len(
-            self._query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_TESSERACT))
-        IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_TESSERACT).set(tesseract_entites_count)
+    def count_items_by_analyser(self, analyser_id: str) -> int:
+        return len(self._query(lambda x: x.analyser == analyser_id))
 
-        google_vision_entites_count = len(
-            self._query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION))
-        IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_GOOGLE_VISION).set(google_vision_entites_count)
-
-        entities_with_text_count = len(
-            self._query(lambda x: x.text is not None and len(x.text) > 0))
-        IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)
+    def count_items_with_text(self) -> int:
+        return len(self._query(lambda x: x.text is not None and len(x.text) > 0))

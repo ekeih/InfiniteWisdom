@@ -13,6 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
+from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
+    IMAGE_ANALYSIS_HAS_TEXT_COUNT
 
 
 class Entity:
@@ -36,6 +39,17 @@ class ImageDataPersistence:
     """
 
     def add(self, entity: Entity) -> bool:
+        """
+        Persists a new entity
+        :param entity: the entity to add
+        :return: true when the entity was added, false otherwise
+        """
+        try:
+            return self._add(entity)
+        finally:
+            self._update_stats()
+
+    def _add(self, entity: Entity) -> bool:
         """
         Persists a new entity
         :param entity: the entity to add
@@ -81,6 +95,16 @@ class ImageDataPersistence:
         Updates the given entity
         :param entity: the entity with modified fields
         """
+        try:
+            self._update(entity)
+        finally:
+            self._update_stats()
+
+    def _update(self, entity: Entity) -> None:
+        """
+        Updates the given entity
+        :param entity: the entity with modified fields
+        """
         raise NotImplementedError()
 
     def count_items_this_month(self, analyser: str) -> int:
@@ -96,9 +120,28 @@ class ImageDataPersistence:
         Removes an entity from the persistence
         :param url: the image url
         """
+        try:
+            self._delete(url)
+        finally:
+            self._update_stats()
+
+    def _delete(self, url: str) -> None:
+        """
+        Removes an entity from the persistence
+        :param url: the image url
+        """
         raise NotImplementedError()
 
     def clear(self) -> None:
+        """
+        Removes all entries from the persistence
+        """
+        try:
+            self._clear()
+        finally:
+            self._update_stats()
+
+    def _clear(self) -> None:
         """
         Removes all entries from the persistence
         """
@@ -122,3 +165,40 @@ class ImageDataPersistence:
                 return False
 
         return True
+
+    def _update_stats(self):
+        """
+        Updates prometheus statistics related to persistence
+        """
+        POOL_SIZE.set(self.count())
+
+        uploaded_entites_count = self.count_items_with_telegram_upload()
+        TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
+
+        tesseract_entites_count = self.count_items_by_analyser(IMAGE_ANALYSIS_TYPE_TESSERACT)
+        IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_TESSERACT).set(tesseract_entites_count)
+
+        google_vision_entites_count = self.count_items_by_analyser(IMAGE_ANALYSIS_TYPE_GOOGLE_VISION)
+        IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_GOOGLE_VISION).set(google_vision_entites_count)
+
+        entities_with_text_count = self.count_items_with_text()
+        IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)
+
+    def count_items_with_telegram_upload(self) -> int:
+        """
+        :return: the number of images that have been uploaded to telegram servers
+        """
+        raise NotImplementedError()
+
+    def count_items_by_analyser(self, analyser_id: str) -> int:
+        """
+        :param analyser_id: analyser id to count
+        :return: the number of images that have been analysed by the given analyser
+        """
+        raise NotImplementedError()
+
+    def count_items_with_text(self) -> int:
+        """
+        :return: the number of images that have a text
+        """
+        raise NotImplementedError()

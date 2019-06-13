@@ -54,6 +54,8 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
         self._sessionmaker = sessionmaker(bind=self._engine)
 
+        self._update_stats()
+
     @contextmanager
     def _session_scope(self) -> Session:
         """Provide a transactional scope around a series of operations."""
@@ -67,7 +69,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         finally:
             session.close()
 
-    def add(self, entity: Entity) -> bool:
+    def _add(self, entity: Entity) -> bool:
         image = Image(url=entity.url,
                       text=entity.text,
                       analyser=entity.analyser, analyser_quality=entity.analyser_quality,
@@ -97,7 +99,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         with self._session_scope() as session:
             return session.query(Image).count()
 
-    def update(self, entity: Entity) -> None:
+    def _update(self, entity: Entity) -> None:
         with self._session_scope() as session:
             old = session.query(Image).filter_by(url=entity.url).first()
             old.telegram_file_id = entity.telegram_file_id
@@ -110,11 +112,25 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             return session.query(Image).filter(Image.analyser == analyser).filter(
                 Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
-    def delete(self, url: str) -> None:
+    def _delete(self, url: str) -> None:
         with self._session_scope() as session:
             entity = session.query(Image).filter_by(url=url).first()
             if entity is not None:
                 return session.delete(entity)
 
-    def clear(self) -> None:
+    def _clear(self) -> None:
         pass
+
+    def count_items_with_telegram_upload(self) -> int:
+        with self._session_scope() as session:
+            return session.query(Image).filter(Image.telegram_file_id.isnot(None)).count()
+
+    def count_items_by_analyser(self, analyser_id: str) -> int:
+        with self._session_scope() as session:
+            return session.query(Image).filter(Image.analyser == analyser_id).count()
+
+    def count_items_with_text(self) -> int:
+        from sqlalchemy import func
+
+        with self._session_scope() as session:
+            return session.query(Image).filter(func.length(Image.text) > 0).count()
