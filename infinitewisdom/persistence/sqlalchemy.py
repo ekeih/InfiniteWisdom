@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import random
 import time
 from contextlib import contextmanager
 
@@ -43,10 +44,10 @@ class SQLAlchemyPersistence(ImageDataPersistence):
     Implementation using SQLAlchemy
     """
 
-    def __init__(self, url: str or None):
+    def __init__(self, url: str or None = None):
         if url is None:
             # TODO: extract to constant
-            url = 'sqlite:///D:/tmp/infinitewisdom.db'
+            url = 'sqlite:///D:\\temp\\infinitewisdom.db'
 
         self._engine = create_engine(url, echo=True)
         Base.metadata.create_all(self._engine)
@@ -76,11 +77,16 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def get_random(self, sample_size: int = None) -> Entity or [Entity]:
         with self._session_scope() as session:
-            session.count()
+            # TODO: this has probably pad performance
+            all = session.query(Image).all()
+            if sample_size is None:
+                return random.choice(all)
+
+            return random.sample(all, k=sample_size)
 
     def find_by_url(self, url: str) -> [Entity]:
         with self._session_scope() as session:
-            return [session.query(Image).filter_by(url=url).first()]
+            return session.query(Image).filter_by(url=url).all()
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         pass
@@ -91,7 +97,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def update(self, entity: Entity) -> None:
         with self._session_scope() as session:
-            old = session.query(Image).filter_by(url=url).first()
+            old = session.query(Image).filter_by(url=entity.url).first()
             old.telegram_file_id = entity.telegram_file_id
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality
@@ -100,11 +106,11 @@ class SQLAlchemyPersistence(ImageDataPersistence):
     def count_items_this_month(self, analyser: str) -> int:
         with self._session_scope() as session:
             return session.query(Image).filter(Image.analyser == analyser).filter(
-                Image.created > (time.time() - 60 * 60 * 24 * 31)).first()
+                Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
     def delete(self, url: str) -> None:
         with self._session_scope() as session:
-            entity = self.find_by_url(url)
+            entity = session.query(Image).filter_by(url=url).first()
             if entity is not None:
                 return session.delete(entity)
 
