@@ -57,10 +57,11 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
-    def get_random(self, sample_size: int = None) -> Entity or [Entity]:
+    def get_random(self, page_size: int = None) -> Entity or [Entity]:
         """
-        Returns a random entity
-        :param sample_size: number of elements to return
+        Returns a random entity or number of random entities depending on parameters.
+        If a page_size is specified a list of entities will be returned, otherwise a single entity or None.
+        :param page_size: number of elements to return
         :return: the entity
         """
         raise NotImplementedError()

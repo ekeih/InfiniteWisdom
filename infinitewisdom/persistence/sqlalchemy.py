@@ -13,11 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import random
 import time
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, String, Float
+from sqlalchemy import create_engine, Column, Integer, String, Float, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -49,7 +48,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             # TODO: extract to constant
             url = 'sqlite:///D:\\temp\\infinitewisdom.db'
 
-        self._engine = create_engine(url, echo=True)
+        self._engine = create_engine(url, echo=False)
         Base.metadata.create_all(self._engine)
 
         self._sessionmaker = sessionmaker(bind=self._engine)
@@ -79,14 +78,13 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         with self._session_scope() as session:
             session.add(image)
 
-    def get_random(self, sample_size: int = None) -> Entity or [Entity]:
+    def get_random(self, page_size: int = None) -> Entity or [Entity]:
         with self._session_scope() as session:
-            # TODO: this has probably pad performance
-            all = session.query(Image).all()
-            if sample_size is None:
-                return random.choice(all)
-
-            return random.sample(all, k=sample_size)
+            query = session.query(Image).order_by(func.random()).limit(page_size)
+            if page_size is None:
+                return query.first()
+            else:
+                return query.all()
 
     def find_by_url(self, url: str) -> [Entity]:
         with self._session_scope() as session:
@@ -130,7 +128,5 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             return session.query(Image).filter(Image.analyser == analyser_id).count()
 
     def count_items_with_text(self) -> int:
-        from sqlalchemy import func
-
         with self._session_scope() as session:
             return session.query(Image).filter(func.length(Image.text) > 0).count()

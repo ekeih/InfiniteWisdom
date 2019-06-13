@@ -86,11 +86,11 @@ class PicklePersistence(ImageDataPersistence):
         self._save()
         return True
 
-    def get_random(self, sample_size: int = None) -> Entity or [Entity]:
-        if sample_size is None:
+    def get_random(self, page_size: int = None) -> Entity or [Entity]:
+        if page_size is None:
             return random.choice(self._entities)
 
-        return random.sample(self._entities, k=sample_size)
+        return random.sample(self._entities, k=page_size)
 
     def _query(self, condition: callable, limit: int = None, offset: int = None):
         """
