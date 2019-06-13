@@ -16,6 +16,7 @@
 
 import logging
 import os
+import time
 from io import BytesIO
 from time import sleep
 
@@ -27,7 +28,8 @@ from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
-from infinitewisdom.persistence.pickle import PicklePersistence, Entity
+from infinitewisdom.persistence.pickle import Entity
+from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -46,7 +48,8 @@ class InfiniteWisdomBot:
         self._config = Config()
 
         if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
-            self._persistence = PicklePersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+            # self._persistence = PicklePersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+            self._persistence = SQLAlchemyPersistence()
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
                 or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
@@ -106,7 +109,8 @@ class InfiniteWisdomBot:
 
             text = analyser.find_text(image)
 
-        self._persistence.add(url, None, text, analyser_id, analyser_quality)
+        entity = Entity(url, text, analyser_id, analyser_quality, time.time(), None)
+        self._persistence.add(entity)
         LOGGER.debug(
             'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
                                                                                analyser_id,

@@ -35,15 +35,10 @@ class ImageDataPersistence:
     Persistence base class
     """
 
-    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None,
-            analyser_quality: float = None) -> bool:
+    def add(self, entity: Entity) -> bool:
         """
         Persists a new entity
-        :param url: the image url
-        :param telegram_file_id: file id of this image on telegram servers
-        :param text: the text of the image
-        :param analyser: an identifier for the analyser that was used to detect image text
-        :param analyser_quality: quality of the analyser at this point in time
+        :param entity: the entity to add
         :return: true when the entity was added, false otherwise
         """
         raise NotImplementedError()

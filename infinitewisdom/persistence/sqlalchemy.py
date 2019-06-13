@@ -67,10 +67,12 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         finally:
             session.close()
 
-    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None,
-            analyser_quality: float = None) -> bool:
-        image = Image(url=url, telegram_file_id=telegram_file_id, text=text, analyser=analyser,
-                      analyser_quality=analyser_quality, created=time.time())
+    def add(self, entity: Entity) -> bool:
+        image = Image(url=entity.url,
+                      text=entity.text,
+                      analyser=entity.analyser, analyser_quality=entity.analyser_quality,
+                      telegram_file_id=entity.telegram_file_id,
+                      created=entity.created)
 
         with self._session_scope() as session:
             session.add(image)

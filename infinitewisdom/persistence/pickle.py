@@ -80,13 +80,11 @@ class PicklePersistence(ImageDataPersistence):
         with open(self._file_path, "wb") as file:
             pickle.dump(self._entities, file)
 
-    def add(self, url: str, telegram_file_id: str or None, text: str = None, analyser: str = None,
-            analyser_quality: float = None) -> bool:
-        if len(self.find_by_url(url)) > 0:
-            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
+    def add(self, entity: Entity) -> bool:
+        if len(self.find_by_url(entity.url)) > 0:
+            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
             return False
 
-        entity = Entity(url, text, analyser, analyser_quality, time.time(), telegram_file_id)
         self._entities.insert(0, entity)
         self._save()
         self._update_stats()
