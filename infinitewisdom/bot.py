@@ -21,6 +21,7 @@ from io import BytesIO
 from time import sleep
 
 import requests
+from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
 
@@ -28,7 +29,7 @@ from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
-from infinitewisdom.persistence.pickle import Entity
+from infinitewisdom.persistence import Entity
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 
@@ -74,7 +75,8 @@ class InfiniteWisdomBot:
         This means filling the url pool and listening for messages.
         """
         if self._persistence.count() < 16:
-            self._add_quotes(count=16)
+            for _ in range(16 - self._persistence.count()):
+                self.add_image_url_to_pool()
 
         queue = self._updater.job_queue
         queue.run_repeating(self._add_quotes_job, interval=600, first=0)

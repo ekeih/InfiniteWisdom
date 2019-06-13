@@ -30,7 +30,7 @@ class Entity:
         self.analyser = analyser
         self.analyser_quality = analyser_quality
         self.created = created
-        self.telegram_file_id = telegram_file_id
+        self._telegram_file_id = telegram_file_id
 
     @property
     def telegram_file_id(self):
@@ -38,7 +38,7 @@ class Entity:
 
     @telegram_file_id.setter
     def telegram_file_id(self, value):
-        self.telegram_file_id = value
+        self._telegram_file_id = value
 
 
 class ImageDataPersistence:

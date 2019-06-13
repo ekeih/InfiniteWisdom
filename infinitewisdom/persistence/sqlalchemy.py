@@ -16,7 +16,7 @@
 import time
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -56,12 +56,13 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         self._update_stats()
 
     @contextmanager
-    def _session_scope(self) -> Session:
+    def _session_scope(self, write: bool = False) -> Session:
         """Provide a transactional scope around a series of operations."""
         session = self._sessionmaker()
         try:
             yield session
-            session.commit()
+            if write:
+                session.commit()
         except:
             session.rollback()
             raise
@@ -75,7 +76,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
                       telegram_file_id=entity.telegram_file_id,
                       created=entity.created)
 
-        with self._session_scope() as session:
+        with self._session_scope(write=True) as session:
             session.add(image)
 
     def get_random(self, page_size: int = None) -> Entity or [Entity]:
@@ -91,14 +92,21 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             return session.query(Image).filter_by(url=url).all()
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
-        pass
+        if limit is None:
+            limit = 16
+
+        words = text.split(" ")
+
+        with self._session_scope() as session:
+            filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
+            return session.query(Image).filter(or_(*filters)).limit(limit).offset(offset).all()
 
     def count(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).count()
 
     def _update(self, entity: Entity) -> None:
-        with self._session_scope() as session:
+        with self._session_scope(write=True) as session:
             old = session.query(Image).filter_by(url=entity.url).first()
             old.telegram_file_id = entity.telegram_file_id
             old.analyser = entity.analyser
@@ -111,7 +119,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
                 Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
     def _delete(self, url: str) -> None:
-        with self._session_scope() as session:
+        with self._session_scope(write=True) as session:
             entity = session.query(Image).filter_by(url=url).first()
             if entity is not None:
                 return session.delete(entity)
