@@ -7,7 +7,7 @@ InfiniteWisdom:
   inline_badge_size: 16
   bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
   persistence:
-    type: "local"
+    type: "pickle"
     path: "/tmp"
   image_analysis:
     type: "tesseract"

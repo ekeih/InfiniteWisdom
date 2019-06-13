@@ -28,8 +28,9 @@ from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHan
 from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
-    PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
+    PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL, IMAGE_ANALYSIS_TYPE_BOTH
 from infinitewisdom.persistence import Entity
+from infinitewisdom.persistence.pickle import PicklePersistence
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 
@@ -48,8 +49,9 @@ class InfiniteWisdomBot:
     def __init__(self):
         self._config = Config()
 
-        if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
-            # self._persistence = PicklePersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+        if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
+            self._persistence = PicklePersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+        elif self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
             self._persistence = SQLAlchemyPersistence()
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
