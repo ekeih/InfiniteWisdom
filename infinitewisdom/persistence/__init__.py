@@ -13,9 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import logging
+
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
     IMAGE_ANALYSIS_HAS_TEXT_COUNT
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Entity:
@@ -53,6 +57,10 @@ class ImageDataPersistence:
         :return: true when the entity was added, false otherwise
         """
         try:
+            if len(self.find_by_url(entity.url)) > 0:
+                LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
+                return False
+
             return self._add(entity)
         finally:
             self._update_stats()

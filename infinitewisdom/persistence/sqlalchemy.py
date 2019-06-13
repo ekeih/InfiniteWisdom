@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import logging
 import time
 from contextlib import contextmanager
 
@@ -22,6 +23,8 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.persistence import ImageDataPersistence, Entity
+
+LOGGER = logging.getLogger(__name__)
 
 Base = declarative_base()
 
@@ -54,6 +57,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         self._sessionmaker = sessionmaker(bind=self._engine)
 
         self._update_stats()
+        LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count()))
 
     @contextmanager
     def _session_scope(self, write: bool = False) -> Session:

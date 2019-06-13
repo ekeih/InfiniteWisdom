@@ -44,7 +44,7 @@ class PicklePersistence(ImageDataPersistence):
 
         self._file_path = path
 
-        LOGGER.debug("Loading local persistence from: {}".format(self._file_path))
+        LOGGER.debug("Loading pickle persistence from: {}".format(self._file_path))
         self._load()
 
     def _load(self) -> None:
@@ -66,7 +66,7 @@ class PicklePersistence(ImageDataPersistence):
             self._entities = pickle.load(file)
 
         self._update_stats()
-        LOGGER.debug("Local persistence loaded: {} entities".format(len(self._entities)))
+        LOGGER.debug("Pickle persistence loaded: {} entities".format(len(self._entities)))
 
     def _save(self) -> None:
         """
@@ -76,10 +76,6 @@ class PicklePersistence(ImageDataPersistence):
             pickle.dump(self._entities, file)
 
     def _add(self, entity: Entity) -> bool:
-        if len(self.find_by_url(entity.url)) > 0:
-            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
-            return False
-
         self._entities.insert(0, entity)
         self._save()
         return True
