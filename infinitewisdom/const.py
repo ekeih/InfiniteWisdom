@@ -18,7 +18,8 @@
 Holds important constants
 """
 
-DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH = "/tmp"
+DEFAULT_PICKLE_PERSISTENCE_PATH = "/tmp/infinitewisdom.pickle"
+DEFAULT_SQL_PERSISTENCE_URL = "sqlite:////tmp/infinitewisdom.db"
 
 CONFIG_FILE_NAME = "infinitewisdom"
 

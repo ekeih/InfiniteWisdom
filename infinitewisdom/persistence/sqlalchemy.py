@@ -20,6 +20,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, func, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
+from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 Base = declarative_base()
@@ -45,8 +46,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def __init__(self, url: str or None = None):
         if url is None:
-            # TODO: extract to constant
-            url = 'sqlite:///D:\\temp\\infinitewisdom.db'
+            url = DEFAULT_SQL_PERSISTENCE_URL
 
         self._engine = create_engine(url, echo=False)
         Base.metadata.create_all(self._engine)

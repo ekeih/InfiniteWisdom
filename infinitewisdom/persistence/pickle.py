@@ -20,7 +20,7 @@ import random
 import time
 from collections import deque
 
-from infinitewisdom.const import DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+from infinitewisdom.const import DEFAULT_PICKLE_PERSISTENCE_PATH
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
@@ -31,20 +31,18 @@ class PicklePersistence(ImageDataPersistence):
     Implementation using a local file
     """
 
-    FILE_NAME = "infinitewisdom.pickle"
-
     _entities = deque()
 
-    def __init__(self, folder: str = None):
-        if folder is None:
-            folder = DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH
+    def __init__(self, path: str = None):
+        if path is None:
+            path = DEFAULT_PICKLE_PERSISTENCE_PATH
 
-        if not os.path.exists(folder):
-            raise FileNotFoundError("Path does not exist: {}".format(folder))
-        if not os.path.isdir(folder):
-            raise NotADirectoryError("Path is not a folder: {}".format(folder))
+        if not os.path.exists(path):
+            raise FileNotFoundError("Path does not exist: {}".format(path))
+        if not os.path.isfile(path):
+            raise NotADirectoryError("Path is not a file: {}".format(path))
 
-        self._file_path = os.path.join(folder, self.FILE_NAME)
+        self._file_path = path
 
         LOGGER.debug("Loading local persistence from: {}".format(self._file_path))
         self._load()

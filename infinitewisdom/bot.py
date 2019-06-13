@@ -50,9 +50,9 @@ class InfiniteWisdomBot:
         self._config = Config()
 
         if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
-            self._persistence = PicklePersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+            self._persistence = PicklePersistence(self._config.PICKLE_PERSISTENCE_PATH.value)
         elif self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
-            self._persistence = SQLAlchemyPersistence()
+            self._persistence = SQLAlchemyPersistence(self._config.SQL_PERSISTENCE_URL.value)
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
                 or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
