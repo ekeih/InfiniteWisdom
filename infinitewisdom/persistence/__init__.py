@@ -32,6 +32,14 @@ class Entity:
         self.created = created
         self.telegram_file_id = telegram_file_id
 
+    @property
+    def telegram_file_id(self):
+        return self.__dict__.get('telegram_file_id', None)
+
+    @telegram_file_id.setter
+    def telegram_file_id(self, value):
+        self.telegram_file_id = value
+
 
 class ImageDataPersistence:
     """

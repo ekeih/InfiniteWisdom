@@ -151,7 +151,7 @@ class PicklePersistence(ImageDataPersistence):
         self._save()
 
     def count_items_with_telegram_upload(self) -> int:
-        return len(self._query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
+        return len(self._query(lambda x: x.telegram_file_id is not None))
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         return len(self._query(lambda x: x.analyser == analyser_id))
