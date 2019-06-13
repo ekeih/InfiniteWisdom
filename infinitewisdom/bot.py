@@ -20,7 +20,6 @@ from io import BytesIO
 from time import sleep
 
 import requests
-from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
 
@@ -28,7 +27,7 @@ from infinitewisdom.analysis import GoogleVision, Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
-from infinitewisdom.persistence import LocalPersistence, Entity
+from infinitewisdom.persistence.pickle import PicklePersistence, Entity
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -47,7 +46,7 @@ class InfiniteWisdomBot:
         self._config = Config()
 
         if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
-            self._persistence = LocalPersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+            self._persistence = PicklePersistence(self._config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
 
         if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
                 or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
