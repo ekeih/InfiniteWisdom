@@ -56,16 +56,6 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
-    def query(self, condition: callable, limit: int = None, offset: int = None) -> [Entity]:
-        """
-        Finds a list of entities that match the condition
-        :param condition: condition to check
-        :param limit: number of items to return (defaults to None)
-        :param offset: item offset (defaults to 0)
-        :return: list of entities
-        """
-        raise NotImplementedError()
-
     def find_by_url(self, url: str) -> [Entity]:
         """
         Finds a list of entities with exactly the given url

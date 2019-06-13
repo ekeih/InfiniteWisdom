@@ -98,7 +98,15 @@ class PicklePersistence(ImageDataPersistence):
 
         return random.sample(self._entities, k=sample_size)
 
-    def query(self, condition: callable, limit: int = None, offset: int = None):
+    def _query(self, condition: callable, limit: int = None, offset: int = None):
+        """
+        Finds a list of entities that match the condition
+        :param condition: condition to check
+        :param limit: number of items to return (defaults to None)
+        :param offset: item offset (defaults to 0)
+        :return: list of entities
+        """
+
         if limit is None:
             limit = self.count()
 
@@ -112,20 +120,20 @@ class PicklePersistence(ImageDataPersistence):
         return entities[start:end]
 
     def find_by_url(self, url: str) -> [Entity]:
-        return self.query(lambda x: x.url == url)
+        return self._query(lambda x: x.url == url)
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         if limit is None:
             limit = 16
 
         words = text.split(" ")
-        return self.query(lambda x: self._contains_words(words, x.text), limit, offset)
+        return self._query(lambda x: self._contains_words(words, x.text), limit, offset)
 
     def count(self) -> int:
         return len(self._entities)
 
     def count_items_this_month(self, analyser: str) -> int:
-        items = self.query(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 31))
+        items = self._query(lambda x: x.analyser == analyser and x.created > (time.time() - 60 * 60 * 24 * 31))
         return len(items)
 
     def update(self, entity: Entity) -> None:
@@ -142,7 +150,7 @@ class PicklePersistence(ImageDataPersistence):
         self._update_stats()
 
     def delete(self, url: str):
-        self._entities = self.query(lambda x: x.url is not url)
+        self._entities = self._query(lambda x: x.url is not url)
         self._save()
         self._update_stats()
 
@@ -154,17 +162,17 @@ class PicklePersistence(ImageDataPersistence):
     def _update_stats(self):
         POOL_SIZE.set(self.count())
         uploaded_entites_count = len(
-            self.query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
+            self._query(lambda x: hasattr(x, 'telegram_file_id') and x.telegram_file_id is not None))
         TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
 
         tesseract_entites_count = len(
-            self.query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_TESSERACT))
+            self._query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_TESSERACT))
         IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_TESSERACT).set(tesseract_entites_count)
 
         google_vision_entites_count = len(
-            self.query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION))
+            self._query(lambda x: x.analyser == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION))
         IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_GOOGLE_VISION).set(google_vision_entites_count)
 
         entities_with_text_count = len(
-            self.query(lambda x: x.text is not None and len(x.text) > 0))
+            self._query(lambda x: x.text is not None and len(x.text) > 0))
         IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)
