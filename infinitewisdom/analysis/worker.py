@@ -71,7 +71,7 @@ class AnalysisWorker:
         """
         Schedules the next run
         """
-        self._timer = threading.Timer(0.5, self._worker_job)
+        self._timer = threading.Timer(1.0, self._worker_job)
         self._timer.start()
 
     def _worker_job(self):
