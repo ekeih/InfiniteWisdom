@@ -16,12 +16,13 @@
 
 import logging
 import threading
+import time
 
 import requests
 
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
-from infinitewisdom.persistence import ImageDataPersistence
+from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -86,14 +87,9 @@ class Crawler:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return None
 
-        analyser_id = None
-        analyser_quality = None
-        text = None
-        self._persistence.add(url, None, text, analyser_id, analyser_quality)
-        LOGGER.debug(
-            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
-                                                                               analyser_id,
-                                                                               text))
+        entity = Entity(url, None, None, None, time.time(), None)
+        self._persistence.add(entity)
+        LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))
 
         return url
 

@@ -21,7 +21,8 @@ import yaml
 
 from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
-    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH, PERSISTENCE_TYPE_LOCAL
+    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, PERSISTENCE_TYPE_PICKLE, \
+    DEFAULT_SQL_PERSISTENCE_URL
 
 
 class ConfigEntry:
@@ -82,15 +83,23 @@ class Config:
             CONFIG_NODE_PERSISTENCE,
             "type"
         ],
-        default=PERSISTENCE_TYPE_LOCAL)
+        default=PERSISTENCE_TYPE_PICKLE)
 
-    LOCAL_PERSISTENCE_FOLDER_PATH = ConfigEntry(
+    PICKLE_PERSISTENCE_PATH = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_PERSISTENCE,
             "path"
         ],
-        default=DEFAULT_LOCAL_PERSISTENCE_FOLDER_PATH)
+        default=DEFAULT_PICKLE_PERSISTENCE_PATH)
+
+    SQL_PERSISTENCE_URL = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_PERSISTENCE,
+            "url"
+        ],
+        default=DEFAULT_SQL_PERSISTENCE_URL)
 
     IMAGE_ANALYSIS_TYPE = ConfigEntry(
         yaml_path=[
@@ -109,7 +118,7 @@ class Config:
         default=None)
 
     _config_entries = [BOT_TOKEN, URL_POOL_SIZE, IMAGE_POLLING_TIMEOUT, GREETING_MESSAGE, INLINE_BADGE_SIZE,
-                       PERSISTENCE_TYPE, LOCAL_PERSISTENCE_FOLDER_PATH,
+                       PERSISTENCE_TYPE, PICKLE_PERSISTENCE_PATH, SQL_PERSISTENCE_URL,
                        IMAGE_ANALYSIS_TYPE, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE]
 
     def __init__(self):
@@ -180,13 +189,13 @@ class Config:
         if self.URL_POOL_SIZE.value < 0:
             raise AssertionError("URL pool size must be >= 0!")
 
-        if self.LOCAL_PERSISTENCE_FOLDER_PATH.value is not None:
-            if not os.path.exists(self.LOCAL_PERSISTENCE_FOLDER_PATH.value):
+        if self.PICKLE_PERSISTENCE_PATH.value is not None:
+            if not os.path.exists(self.PICKLE_PERSISTENCE_PATH.value):
                 raise FileNotFoundError(
-                    "Local persistence path does not exist: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH.value))
-            if not os.path.isdir(self.LOCAL_PERSISTENCE_FOLDER_PATH.value):
-                raise NotADirectoryError(
-                    "Local persistence path is not a folder: {}".format(self.LOCAL_PERSISTENCE_FOLDER_PATH.value))
+                    "Local persistence path does not exist: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
+            if not os.path.isfile(self.PICKLE_PERSISTENCE_PATH.value):
+                raise IsADirectoryError(
+                    "Local persistence path is not a file: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
 
         if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is not None:
             if not os.path.isfile(

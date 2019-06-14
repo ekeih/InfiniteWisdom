@@ -7,8 +7,9 @@ InfiniteWisdom:
   inline_badge_size: 16
   bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
   persistence:
-    type: "local"
-    path: "/tmp"
+    type: "sql"
+    url: "sqlite:////tmp/infinitewisdom.db"
+    #path: "/tmp/infinitewisdom.pickle"
   image_analysis:
     type: "tesseract"
 #    type: "google-vision"

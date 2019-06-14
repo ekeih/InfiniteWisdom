@@ -28,9 +28,11 @@ from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
-    PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
+    PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL, IMAGE_ANALYSIS_TYPE_BOTH
 from infinitewisdom.crawler import Crawler
-from infinitewisdom.persistence import LocalPersistence, Entity, ImageDataPersistence
+from infinitewisdom.persistence import Entity, ImageDataPersistence
+from infinitewisdom.persistence.pickle import PicklePersistence
+from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 from infinitewisdom.util import download_image_bytes
 
@@ -104,7 +106,7 @@ class InfiniteWisdomBot:
         entity = self._persistence.get_random()
         LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
 
-        if not hasattr(entity, 'telegram_file_id') or entity.telegram_file_id is None:
+        if entity.telegram_file_id is None:
             image_bytes = download_image_bytes(entity.url)
             file_id = self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
             entity.telegram_file_id = file_id
@@ -153,7 +155,7 @@ class InfiniteWisdomBot:
         if len(query) > 0:
             entities = self._persistence.find_by_text(query, badge_size, offset)
         else:
-            entities = self._persistence.get_random(sample_size=badge_size)
+            entities = self._persistence.get_random(page_size=badge_size)
 
         results = list(map(lambda x: self._entity_to_inline_query_result(x), entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
@@ -179,7 +181,7 @@ class InfiniteWisdomBot:
         :param entity: the entity to use
         :return: inline result object
         """
-        if hasattr(entity, 'telegram_file_id') and entity.telegram_file_id is not None:
+        if entity.telegram_file_id is not None:
             return InlineQueryResultCachedPhoto(
                 id=entity.url,
                 photo_file_id=str(entity.telegram_file_id),
@@ -199,8 +201,10 @@ if __name__ == '__main__':
 
     # TODO: persistence is necessary for proper operation, so this should never be None
     persistence = None
-    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_LOCAL:
-        persistence = LocalPersistence(config.LOCAL_PERSISTENCE_FOLDER_PATH.value)
+    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
+        persistence = PicklePersistence(config.PICKLE_PERSISTENCE_PATH.value)
+    elif config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
+        persistence = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
 
     image_analysers = []
     if config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
@@ -220,5 +224,5 @@ if __name__ == '__main__':
     analysis_worker = AnalysisWorker(config, persistence, image_analysers)
 
     wisdom_bot.start()
-    crawler.start()
+    # crawler.start()
     analysis_worker.start()
