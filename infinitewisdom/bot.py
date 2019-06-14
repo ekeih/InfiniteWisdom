@@ -18,21 +18,20 @@ import logging
 import os
 import time
 from io import BytesIO
-from time import sleep
 
-import requests
 from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
 
-from infinitewisdom.analysis import GoogleVision, Tesseract
+from infinitewisdom.analysis import GoogleVision, Tesseract, ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL, IMAGE_ANALYSIS_TYPE_BOTH
-from infinitewisdom.persistence import Entity
+from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.persistence.pickle import PicklePersistence
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
+from infinitewisdom.util import download_image_bytes
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -44,24 +43,14 @@ class InfiniteWisdomBot:
     The main entry class of the InfiniteWisdom telegram bot
     """
 
-    _image_analysers = []
-
-    def __init__(self):
-        self._config = Config()
-
-        if self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
-            self._persistence = PicklePersistence(self._config.PICKLE_PERSISTENCE_PATH.value)
-        elif self._config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
-            self._persistence = SQLAlchemyPersistence(self._config.SQL_PERSISTENCE_URL.value)
-
-        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
-                or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
-            self._image_analysers.append(Tesseract())
-        if self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION \
-                or self._config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
-            auth_file = self._config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
-            if os.path.isfile(auth_file):
-                self._image_analysers.append(GoogleVision(auth_file))
+    def __init__(self, config: Config, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
+        """
+        Creates an instance.
+        :param config: configuration object
+        """
+        self._config = config
+        self._persistence = persistence
+        self._image_analysers = image_analysers
 
         self._updater = Updater(token=self._config.BOT_TOKEN.value)
 
@@ -76,13 +65,6 @@ class InfiniteWisdomBot:
         Starts up the bot.
         This means filling the url pool and listening for messages.
         """
-        if self._persistence.count() < 16:
-            for _ in range(16 - self._persistence.count()):
-                self.add_image_url_to_pool()
-
-        queue = self._updater.job_queue
-        queue.run_repeating(self._add_quotes_job, interval=600, first=0)
-
         self._updater.start_polling()
 
     def stop(self):
@@ -90,79 +72,6 @@ class InfiniteWisdomBot:
         Shuts down the bot.
         """
         self._updater.stop()
-
-    def add_image_url_to_pool(self) -> str or None:
-        """
-        Requests a new image url and adds it to the pool
-        :return: the added url
-        """
-        url = self._fetch_generated_image_url()
-
-        if len(self._persistence.find_by_url(url)) > 0:
-            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
-            return None
-
-        analyser_id = None
-        analyser_quality = None
-        text = None
-        if len(self._image_analysers) > 0:
-            image = self._download_image_bytes(url)
-            analyser = self._select_analyser()
-            analyser_id = analyser.get_identifier()
-            analyser_quality = analyser.get_quality()
-
-            text = analyser.find_text(image)
-
-        entity = Entity(url, text, analyser_id, analyser_quality, time.time(), None)
-        self._persistence.add(entity)
-        LOGGER.debug(
-            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
-                                                                               analyser_id,
-                                                                               text))
-        return url
-
-    def _select_analyser(self):
-        """
-        Selects an analyser based on it's quality and remaining capacity
-        """
-
-        if len(self._image_analysers) == 1:
-            return self._image_analysers[0]
-
-        def remaining_capacity(analyser) -> int:
-            """
-            Calculates the remaining capacity of an analyser
-            :param analyser: the analyser to check
-            :return: the remaining capacity of the analyser
-            """
-            count = self._persistence.count_items_this_month(analyser.get_identifier())
-            remaining = analyser.get_monthly_capacity() - count
-            return remaining
-
-        available = filter(lambda x: remaining_capacity(x) > 0, self._image_analysers)
-        optimal = sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
-        return optimal
-
-    @staticmethod
-    def _fetch_generated_image_url() -> str:
-        """
-        Requests the image api to generate a new image url
-        :return: the image url
-        """
-        url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
-        url_page.raise_for_status()
-        return url_page.text
-
-    @staticmethod
-    def _download_image_bytes(url: str) -> bytes:
-        """
-        Downloads the image from the given url
-        :return: the downloaded image
-        """
-        image = requests.get(url)
-        image.raise_for_status()
-        LOGGER.debug('Fetched image from: {}'.format(url))
-        return image.content
 
     @START_TIME.time()
     def _start_callback(self, bot: Bot, update: Update) -> None:
@@ -195,7 +104,7 @@ class InfiniteWisdomBot:
         LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
 
         if entity.telegram_file_id is None:
-            image_bytes = self._download_image_bytes(entity.url)
+            image_bytes = download_image_bytes(entity.url)
             file_id = self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
             entity.telegram_file_id = file_id
             self._persistence.update(entity)
@@ -283,21 +192,32 @@ class InfiniteWisdomBot:
                 photo_width=50
             )
 
-    def _add_quotes(self, count: int = 300) -> None:
-        """
-        Adds the given amount of image url's to the pool, sleeping between ever single
-        one of them. This method is blocking so it should be called from a background thread.
-        :param count: amount of image url's to query
-        """
-        for _ in range(count):
-            self.add_image_url_to_pool()
-            sleep(self._config.IMAGE_POLLING_TIMEOUT.value)
-
-    def _add_quotes_job(self, bot: Bot, update: Update) -> None:
-        self._add_quotes(count=300)
-
 
 if __name__ == '__main__':
+    config = Config()
+
+    # TODO: persistence is necessary for proper operation, so this should never be None
+    persistence = None
+    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
+        persistence = PicklePersistence(config.PICKLE_PERSISTENCE_PATH.value)
+    elif config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
+        persistence = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
+
+    image_analysers = []
+    if config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
+            or config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
+        image_analysers.append(Tesseract())
+    if config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION \
+            or config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
+        auth_file = config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
+        if os.path.isfile(auth_file):
+            image_analysers.append(GoogleVision(auth_file))
+
+    # start prometheus server
     start_http_server(8000)
-    wisdom_bot = InfiniteWisdomBot()
+
+    wisdom_bot = InfiniteWisdomBot(config, persistence, image_analysers)
+    crawler = Crawler(config, persistence, image_analysers)
+
     wisdom_bot.start()
+    crawler.start()
