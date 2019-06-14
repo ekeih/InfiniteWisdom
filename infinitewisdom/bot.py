@@ -22,7 +22,9 @@ from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
 
-from infinitewisdom.analysis import GoogleVision, Tesseract, ImageAnalyser
+from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.analysis.googlevision import GoogleVision
+from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_LOCAL, IMAGE_ANALYSIS_TYPE_BOTH
