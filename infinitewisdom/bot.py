@@ -16,7 +16,6 @@
 
 import logging
 import os
-import time
 from io import BytesIO
 
 from prometheus_client import start_http_server
@@ -27,6 +26,7 @@ from infinitewisdom.analysis import GoogleVision, Tesseract, ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL, IMAGE_ANALYSIS_TYPE_BOTH
+from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.persistence.pickle import PicklePersistence
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
