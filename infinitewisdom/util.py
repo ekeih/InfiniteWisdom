@@ -58,7 +58,8 @@ def select_best_available_analyser(analysers: [ImageAnalyser],
         remaining = analyser.get_monthly_capacity() - count
         return remaining
 
-    available = filter(lambda x: remaining_capacity(x) > 0, analysers)
-    # TODO: this list might be empty!
-    optimal = sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
-    return optimal
+    available = list(filter(lambda x: remaining_capacity(x) > 0, analysers))
+    if len(available) <= 0:
+        return None
+    else:
+        return sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
