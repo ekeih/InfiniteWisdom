@@ -24,6 +24,7 @@ from infinitewisdom.const import DEFAULT_PICKLE_PERSISTENCE_PATH
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class PicklePersistence(ImageDataPersistence):

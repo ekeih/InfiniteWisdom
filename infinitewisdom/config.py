@@ -40,6 +40,7 @@ class Config:
     """
 
     LOGGER = logging.getLogger(__name__)
+    LOGGER.setLevel(logging.DEBUG)
 
     BOT_TOKEN = ConfigEntry(
         yaml_path=[

@@ -25,6 +25,7 @@ from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 Base = declarative_base()
 

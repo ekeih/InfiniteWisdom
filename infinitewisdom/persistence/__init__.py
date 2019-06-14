@@ -20,6 +20,7 @@ from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALY
     IMAGE_ANALYSIS_HAS_TEXT_COUNT
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class Entity:
