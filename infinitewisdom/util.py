@@ -18,6 +18,9 @@ import logging
 
 import requests
 
+from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.persistence import ImageDataPersistence
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
@@ -31,3 +34,31 @@ def download_image_bytes(url: str) -> bytes:
     image.raise_for_status()
     LOGGER.debug('Fetched image from: {}'.format(url))
     return image.content
+
+
+def select_best_available_analyser(analysers: [ImageAnalyser],
+                                   persistence: ImageDataPersistence) -> ImageAnalyser or None:
+    """
+    Selects the best available analyser based on it's quality and remaining capacity
+    :param analysers: the analysers to choose from
+    :param persistence: currently in use persistence
+    :return: analyser or None
+    """
+
+    if len(analysers) == 1:
+        return analysers[0]
+
+    def remaining_capacity(analyser) -> int:
+        """
+        Calculates the remaining capacity of an analyser
+        :param analyser: the analyser to check
+        :return: the remaining capacity of the analyser
+        """
+        count = persistence.count_items_this_month(analyser.get_identifier())
+        remaining = analyser.get_monthly_capacity() - count
+        return remaining
+
+    available = filter(lambda x: remaining_capacity(x) > 0, analysers)
+    # TODO: this list might be empty!
+    optimal = sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
+    return optimal

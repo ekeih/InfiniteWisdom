@@ -99,6 +99,14 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    def find_non_optimal(self, target_quality: int) -> Entity or None:
+        """
+        Finds the oldest image that has not yet been analysed by the best available analyser (or not at all)
+        :param target_quality: the target quality to reach
+        :return: a non-optimal entity or None
+        """
+        raise NotImplementedError()
+
     def count(self) -> int:
         """
         Returns the total number of entities stored in this persistence
@@ -245,6 +253,11 @@ class LocalPersistence(ImageDataPersistence):
 
         words = text.split(" ")
         return self.query(lambda x: self._contains_words(words, x.text), limit, offset)
+
+    def find_non_optimal(self, target_quality: int) -> Entity or None:
+        return next(iter(
+            sorted(filter(lambda x: x.analyser_quality is None or x.analyser_quality < target_quality, self._entities),
+                   key=lambda x: x.created)), None)
 
     def count(self) -> int:
         return len(self._entities)
