@@ -101,7 +101,12 @@ class ImageDataPersistence:
 
     def find_non_optimal(self, target_quality: int) -> Entity or None:
         """
-        Finds the oldest image that has not yet been analysed by the best available analyser (or not at all)
+        Finds an image with suboptimal analysis quality.
+
+        If multiple images exist they are sorted by the following criteria:
+          - quality (None first, lowest first)
+          - date (oldest first)
+
         :param target_quality: the target quality to reach
         :return: a non-optimal entity or None
         """
@@ -255,9 +260,16 @@ class LocalPersistence(ImageDataPersistence):
         return self.query(lambda x: self._contains_words(words, x.text), limit, offset)
 
     def find_non_optimal(self, target_quality: int) -> Entity or None:
-        return next(iter(
-            sorted(filter(lambda x: x.analyser_quality is None or x.analyser_quality < target_quality, self._entities),
+        entity = next(iter(
+            sorted(filter(lambda x: x.analyser_quality is None, self._entities),
                    key=lambda x: x.created)), None)
+        if entity is not None:
+            return entity
+
+        return next(iter(
+            sorted(filter(lambda x: x.analyser_quality is not None and x.analyser_quality < target_quality,
+                          self._entities),
+                   key=lambda x: (x.analyser_quality, x.created))), None)
 
     def count(self) -> int:
         return len(self._entities)

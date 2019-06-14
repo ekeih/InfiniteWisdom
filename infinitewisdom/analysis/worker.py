@@ -22,6 +22,7 @@ from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import select_best_available_analyser, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class AnalysisWorker:
@@ -70,7 +71,7 @@ class AnalysisWorker:
         """
         Schedules the next run
         """
-        self._timer = threading.Timer(1.0, self._worker_job)
+        self._timer = threading.Timer(0.5, self._worker_job)
         self._timer.start()
 
     def _worker_job(self):
@@ -79,33 +80,38 @@ class AnalysisWorker:
         """
         try:
             entity = self._persistence.find_non_optimal(self._target_quality)
-            if entity is not None:
-                analyser = select_best_available_analyser(self._image_analysers, self._persistence)
-                if analyser is None:
-                    LOGGER.debug("No analyser available, skipping '{}'".format(entity.url))
-                    return
+            if entity is None:
+                # nothing to analyse
+                return
 
-                if entity.analyser_quality and entity.analyser_quality >= analyser:
-                    LOGGER.debug(
-                        "Not analysing '{}' with '{}' because it wouldn't improve analysis quality ({} vs {})".format(
-                            entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
-                    return
+            analyser = select_best_available_analyser(self._image_analysers, self._persistence)
+            if analyser is None:
+                LOGGER.debug("No analyser available, skipping '{}'".format(entity.url))
+                return
 
-                image = download_image_bytes(entity.url)
-
-                old_quality = entity.analyser_quality
-                if old_quality is None:
-                    old_quality = 0
-
-                entity.analyser_id = analyser.get_identifier()
-                entity.analyser_quality = analyser.get_quality()
-                entity.text = analyser.find_text(image)
-
-                self._persistence.update(entity)
+            if entity.analyser_quality is not None and entity.analyser_quality >= analyser.get_quality():
                 LOGGER.debug(
-                    "Updated analysis of '{}' with '{}' with a quality improvement of {} ({} -> {})".format(
-                        entity.url, analyser.get_identifier(), entity.analyser_quality - old_quality, old_quality,
-                        entity.analyser_quality))
+                    "Not analysing '{}' with '{}' because it wouldn't improve analysis quality ({} vs {})".format(
+                        entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
+                return
+
+            image = download_image_bytes(entity.url)
+
+            old_analyser = entity.analyser
+            old_quality = entity.analyser_quality
+            if old_quality is None:
+                old_quality = 0
+
+            entity.analyser = analyser.get_identifier()
+            entity.analyser_quality = analyser.get_quality()
+            entity.text = analyser.find_text(image)
+
+            self._persistence.update(entity)
+            LOGGER.debug(
+                "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {})".format(
+                    entity.url, analyser.get_identifier(), old_analyser, entity.analyser_quality - old_quality,
+                    old_quality,
+                    entity.analyser_quality))
 
         except Exception as e:
             LOGGER.error(e)
