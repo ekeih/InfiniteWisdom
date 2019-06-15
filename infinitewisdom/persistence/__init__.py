@@ -22,7 +22,6 @@ from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALY
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
-
 class Entity:
     """
     Persistence entity
@@ -33,7 +32,7 @@ class Entity:
         self.url = url
         self.text = text
         self.analyser = analyser
-        self.analyser_quality = analyser_quality
+        self._analyser_quality = analyser_quality
         self.created = created
         self._telegram_file_id = telegram_file_id
 
@@ -43,6 +42,14 @@ class Entity:
 
     @telegram_file_id.setter
     def telegram_file_id(self, value):
+        self._telegram_file_id = value
+
+    @property
+    def analyser_quality(self):
+        return self.__dict__.get('analyser_quality', None)
+
+    @analyser_quality.setter
+    def analyser_quality(self, value):
         self._telegram_file_id = value
 
 
