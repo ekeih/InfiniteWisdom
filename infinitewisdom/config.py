@@ -23,7 +23,7 @@ from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_
     CONFIG_NODE_ROOT, \
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, PERSISTENCE_TYPE_PICKLE, \
     DEFAULT_SQL_PERSISTENCE_URL, CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
-    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH
+    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_TIMEOUT
 
 
 class ConfigEntry:
@@ -72,7 +72,7 @@ class Config:
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_CRAWLER,
-            "timeout"
+            CONFIG_NODE_TIMEOUT
         ],
         default=1.0)
 
@@ -99,6 +99,14 @@ class Config:
             "url"
         ],
         default=DEFAULT_SQL_PERSISTENCE_URL)
+
+    IMAGE_ANALYSIS_TIMEOUT = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_IMAGE_ANALYSIS,
+            CONFIG_NODE_TIMEOUT
+        ],
+        default=1)
 
     IMAGE_ANALYSIS_TESSERACT_ENABLED = ConfigEntry(
         yaml_path=[
@@ -136,9 +144,10 @@ class Config:
         ],
         default=None)
 
-    _config_entries = [TELEGRAM_BOT_TOKEN, CRAWLER_TIMEOUT, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
+    _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
+                       CRAWLER_TIMEOUT,
                        PERSISTENCE_TYPE, PICKLE_PERSISTENCE_PATH, SQL_PERSISTENCE_URL,
-                       IMAGE_ANALYSIS_TESSERACT_ENABLED,
+                       IMAGE_ANALYSIS_TIMEOUT, IMAGE_ANALYSIS_TESSERACT_ENABLED,
                        IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE,
                        IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY]
 
@@ -219,7 +228,7 @@ class Config:
         if self.IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED.value:
             if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is None:
                 raise AssertionError("Google Vision authentication file is required")
-            
+
             if not os.path.isfile(
                     self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value):
                 raise IsADirectoryError("Google Vision Auth file path is not a file: {}".format(

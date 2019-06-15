@@ -12,10 +12,11 @@ InfiniteWisdom:
     url: "sqlite:////tmp/infinitewisdom.db"
     path: "/home/markus/downloads/dev.pickle"
   image_analysis:
+    timeout: 1
     tesseract:
       enabled: True
     google_vision:
-      enabled: True
+      enabled: False
       auth_file: "./InfiniteWisdom-1522618e7d39.json"
       capacity_per_month: 100
 
