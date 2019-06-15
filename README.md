@@ -1,6 +1,8 @@
 # InfiniteWisdom
 A Telegram bot that sends inspirational quotes of infinite wisdom... 🥠
 
+<img src="phone_screenshot.jpg" width="480">
+
 ## Configuration
 
 InfiniteWisdom can be configured either using environment variables
