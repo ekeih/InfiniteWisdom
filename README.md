@@ -1,7 +1,7 @@
 # InfiniteWisdom
 A Telegram bot that sends inspirational quotes of infinite wisdom... 🥠
 
-<img src="images/phone/start.jpg" width="350"><img src="images/phone/inline.jpg" width="350"><img src="images/phone/inline_big.jpg" width="350"><img src="images/phone/text_search.jpg" width="350">
+<img src="images/phone/start.jpg" width="350"> <img src="images/phone/inline.jpg" width="350"> <img src="images/phone/inline_big.jpg" width="350"> <img src="images/phone/text_search.jpg" width="350">
 
 ## Configuration
 
