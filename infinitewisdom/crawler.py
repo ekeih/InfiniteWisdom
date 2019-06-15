@@ -23,7 +23,6 @@ import requests
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
-from infinitewisdom.util import download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -88,47 +87,11 @@ class Crawler:
             LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
             return None
 
-        analyser_id = None
-        analyser_quality = None
-        text = None
-        if len(self._image_analysers) > 0:
-            image = download_image_bytes(url)
-            analyser = self._select_analyser()
-            analyser_id = analyser.get_identifier()
-            analyser_quality = analyser.get_quality()
-
-            text = analyser.find_text(image)
-
-        entity = Entity(url, text, analyser_id, analyser_quality, time.time(), None)
+        entity = Entity(url, None, None, None, time.time(), None)
         self._persistence.add(entity)
-        LOGGER.debug(
-            'Added image #{} with URL: "{}", analyser: "{}", text:"{}"'.format(self._persistence.count(), url,
-                                                                               analyser_id,
-                                                                               text))
+        LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))
 
         return url
-
-    def _select_analyser(self):
-        """
-        Selects an analyser based on it's quality and remaining capacity
-        """
-
-        if len(self._image_analysers) == 1:
-            return self._image_analysers[0]
-
-        def remaining_capacity(analyser) -> int:
-            """
-            Calculates the remaining capacity of an analyser
-            :param analyser: the analyser to check
-            :return: the remaining capacity of the analyser
-            """
-            count = self._persistence.count_items_this_month(analyser.get_identifier())
-            remaining = analyser.get_monthly_capacity() - count
-            return remaining
-
-        available = filter(lambda x: remaining_capacity(x) > 0, self._image_analysers)
-        optimal = sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
-        return optimal
 
     @staticmethod
     def _fetch_generated_image_url() -> str:

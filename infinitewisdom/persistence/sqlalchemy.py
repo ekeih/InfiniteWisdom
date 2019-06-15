@@ -25,6 +25,7 @@ from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 Base = declarative_base()
 
@@ -104,6 +105,16 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         with self._session_scope() as session:
             filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
             return session.query(Image).filter(or_(*filters)).limit(limit).offset(offset).all()
+
+    def find_non_optimal(self, target_quality: int) -> Entity or None:
+        with self._session_scope() as session:
+            entity = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(Image.created).first()
+            if entity is not None:
+                return entity
+
+            return session.query(Image).filter(Image.analyser_quality.isnot(None),
+                                               Image.analyser_quality < target_quality).order_by(Image.analyser_quality,
+                                                                                                 Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:

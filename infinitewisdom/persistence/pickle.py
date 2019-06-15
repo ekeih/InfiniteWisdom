@@ -24,6 +24,7 @@ from infinitewisdom.const import DEFAULT_PICKLE_PERSISTENCE_PATH
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class PicklePersistence(ImageDataPersistence):
@@ -116,6 +117,18 @@ class PicklePersistence(ImageDataPersistence):
 
         words = text.split(" ")
         return self._query(lambda x: self._contains_words(words, x.text), limit, offset)
+
+    def find_non_optimal(self, target_quality: int) -> Entity or None:
+        entity = next(iter(
+            sorted(filter(lambda x: x.analyser_quality is None, self._entities),
+                   key=lambda x: x.created)), None)
+        if entity is not None:
+            return entity
+
+        return next(iter(
+            sorted(filter(lambda x: x.analyser_quality is not None and x.analyser_quality < target_quality,
+                          self._entities),
+                   key=lambda x: (x.analyser_quality, x.created))), None)
 
     def count(self) -> int:
         return len(self._entities)

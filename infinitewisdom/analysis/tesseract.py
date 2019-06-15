@@ -14,82 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import math
-import os
 
-
-class ImageAnalyser:
-    """
-    Base class for image analysis
-    """
-
-    def get_identifier(self) -> str:
-        """
-        :return: an identifier for this analyser
-        """
-        raise NotImplementedError()
-
-    def get_quality(self) -> float:
-        """
-        :return: the quality of this analyser compared to other implementations
-        """
-        raise NotImplementedError()
-
-    def get_monthly_capacity(self) -> float:
-        """
-        :return: the number of items per month that can be analysed by this analyser
-        """
-        raise NotImplementedError()
-
-    def find_text(self, image: bytes) -> str or None:
-        """
-        Analyses the given image
-        :param image: the image to analyse
-        :return: recognized text
-        """
-        raise NotImplementedError()
-
-
-class GoogleVision(ImageAnalyser):
-    """
-    Google Vision API implementation
-    """
-
-    def __init__(self, auth_file_path: str):
-        """
-        :param auth_file_path: authentication file for the google vision api
-        """
-        # Imports the Google Cloud client library
-        from google.cloud import vision
-
-        self._auth_file_path = auth_file_path
-        self._auth_id = os.path.split(auth_file_path)[1]
-
-        # Instantiates a client
-        self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file_path)
-
-    def get_identifier(self) -> str:
-        from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
-        return IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
-
-    def get_quality(self) -> float:
-        return 0.9
-
-    def get_monthly_capacity(self) -> float:
-        return 1000.0
-
-    def find_text(self, image: bytes):
-        from google.cloud.vision import types
-
-        image = types.Image(content=image)
-
-        # Performs label detection on the image file
-        response = self._client.text_detection(image=image)
-        text_annotations = response.text_annotations
-        # the first annotation contains the whole thing
-        if len(text_annotations) > 0:
-            return text_annotations[0].description
-        else:
-            return None
+from infinitewisdom.analysis import ImageAnalyser
 
 
 class Tesseract(ImageAnalyser):

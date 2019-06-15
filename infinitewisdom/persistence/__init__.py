@@ -20,6 +20,7 @@ from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALY
     IMAGE_ANALYSIS_HAS_TEXT_COUNT
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class Entity:
@@ -97,6 +98,19 @@ class ImageDataPersistence:
         :param limit: number of items to return (defaults to 16)
         :param offset: item offset
         :return: list of entities
+        """
+        raise NotImplementedError()
+
+    def find_non_optimal(self, target_quality: int) -> Entity or None:
+        """
+        Finds an image with suboptimal analysis quality.
+
+        If multiple images exist they are sorted by the following criteria:
+          - quality (None first, lowest first)
+          - date (oldest first)
+
+        :param target_quality: the target quality to reach
+        :return: a non-optimal entity or None
         """
         raise NotImplementedError()
 
