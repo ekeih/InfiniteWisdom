@@ -197,7 +197,6 @@ class InfiniteWisdomBot:
 if __name__ == '__main__':
     config = Config()
 
-    # TODO: persistence is necessary for proper operation, so this should never be None
     persistence = None
     if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
         persistence = PicklePersistence(config.PICKLE_PERSISTENCE_PATH.value)
