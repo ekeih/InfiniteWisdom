@@ -9,6 +9,7 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY infinitewisdom/ infinitewisdom/
 COPY infinitewisdom/bot.py bot.py
+COPY db_migration.py db_migration.py
 
 
 CMD [ "python", "./bot.py" ]
