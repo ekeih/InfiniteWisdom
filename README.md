@@ -16,7 +16,7 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
 | INFINITEWISDOM_TELEGRAM_INLINE_BADGE_SIZE             | Number of items to return in a single inline request badge | `int` | `16` |
 | INFINITEWISDOM_CRAWLER_TIMEOUT                        | Timeout in seconds between image api requests | `float` | `1` |
-| INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `local` |
+| INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
 | INFINITEWISDOM_PERSISTENCE_PATH                       | pickle persistence file path | `str` | `/tmp/infinitewisdom.pickle` |
 | INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_TIMEOUT                 | Timeout in seconds between image analysis | `float` | `1` |
@@ -44,8 +44,7 @@ InfiniteWisdom:
     timeout: 1
   persistence:
     type: "sql"
-    url: "sqlite:////tmp/infinitewisdom.db"
-    path: "/home/markus/downloads/dev.pickle"
+    url: "sqlite:///infinitewisdom.db"
   image_analysis:
     timeout: 1
     tesseract:
@@ -76,7 +75,7 @@ InfiniteWisdom:
   [...]
   persistence:
     type: "sql"
-    url: "sqlite:////tmp/infinitewisdom.db"
+    url: "sqlite:///infinitewisdom.db"
 ```
 
 ### Image analysis

@@ -21,9 +21,10 @@ import yaml
 
 from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
-    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, PERSISTENCE_TYPE_PICKLE, \
-    DEFAULT_SQL_PERSISTENCE_URL, CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
-    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_TIMEOUT
+    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, DEFAULT_SQL_PERSISTENCE_URL, \
+    CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
+    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_TIMEOUT, \
+    PERSISTENCE_TYPE_SQL, PERSISTENCE_TYPE_PICKLE
 
 
 class ConfigEntry:
@@ -82,7 +83,7 @@ class Config:
             CONFIG_NODE_PERSISTENCE,
             "type"
         ],
-        default=PERSISTENCE_TYPE_PICKLE)
+        default=PERSISTENCE_TYPE_SQL)
 
     PICKLE_PERSISTENCE_PATH = ConfigEntry(
         yaml_path=[
@@ -217,13 +218,14 @@ class Config:
         if self.CRAWLER_TIMEOUT.value < 0:
             raise AssertionError("Image polling timeout must be >= 0!")
 
-        if self.PICKLE_PERSISTENCE_PATH.value is not None:
-            if not os.path.exists(self.PICKLE_PERSISTENCE_PATH.value):
+        if self.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
+            folder, file = os.path.split(os.path.abspath(self.PICKLE_PERSISTENCE_PATH.value))
+            if not os.path.exists(folder):
                 raise FileNotFoundError(
                     "Local persistence path does not exist: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
-            if not os.path.isfile(self.PICKLE_PERSISTENCE_PATH.value):
-                raise IsADirectoryError(
-                    "Local persistence path is not a file: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
+            if os.path.isfile(folder):
+                raise NotADirectoryError(
+                    "Local persistence parent path is not a directory: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
 
         if self.IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED.value:
             if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is None:
