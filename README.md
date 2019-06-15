@@ -10,18 +10,19 @@ will always override the value provided in the yaml file.
 
 ### Environment variables
 
-| Name                        | Description                              | Type     | Default                                |
-|-----------------------------|------------------------------------------|----------|----------------------------------------|
-| INFINITEWISDOM_BOT_TOKEN                   | The bot token used to authenticate the bot with telegram | String | `-` |
-| INFINITEWISDOM_MAX_URL_POOL_SIZE           | Maximum number of URLs to keep in the pool | Integer | `10000` |
-| INFINITEWISDOM_IMAGE_POLLING_TIMEOUT       | Timeout in seconds between image api requests | Integer | `1` |
-| INFINITEWISDOM_GREETING_MESSAGE            | Specifies the message a new user is greeted with | String | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
-| INFINITEWISDOM_INLINE_BADGE_SIZE           | Number of items to return in a single inline request badge | Integer | `16` |
-| INFINITEWISDOM_PERSISTENCE_TYPE            | Type of persistence to use | String | `local` |
-| INFINITEWISDOM_PERSISTENCE_PATH            | Path of pickle persistence | String | `/tmp/infinitewisdom.pickle` |
-| INFINITEWISDOM_PERSISTENCE_URL             | URL to use for SQLAlchemy connection | String | `sqlite:////tmp/infinitewisdom.db` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_TYPE         | Type of image analysis to use | String | `None` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_AUTH_FILE    | Path of Google Vision auth file | String | `None` |
+| Name                                                  | Description                              | Type     | Default                                |
+|-------------------------------------------------------|------------------------------------------|----------|----------------------------------------|
+| INFINITEWISDOM_TELEGRAM_BOT_TOKEN                     | The bot token used to authenticate the bot with telegram | `str` | `-` |
+| INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
+| INFINITEWISDOM_TELEGRAM_INLINE_BADGE_SIZE             | Number of items to return in a single inline request badge | `int` | `16` |
+| INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
+| INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
+| INFINITEWISDOM_PERSISTENCE_PATH                       | pickle persistence file path | `str` | `/tmp/infinitewisdom.pickle` |
+| INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_INTERVAL                | Interval in seconds for image analysis | `float` | `1` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE | Path of Google Vision auth file | `str` | `None` |
 
 ### yaml file
 
@@ -35,16 +36,22 @@ and looks like this:
 
 ```yaml
 InfiniteWisdom:
-  greeting_message: "Hi there!"
-  max_url_pool_size: 10000
-  image_polling_timeout: 1
-  inline_badge_size: 16
-  bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+  telegram:
+    bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+    greeting_message: "Hi there!"
+    inline_badge_size: 16
+  crawler:
+    interval: 1
   persistence:
-    type: "local"
-    path: "/tmp/infinitewisdom.pickle"
+    type: "sql"
+    url: "sqlite:///infinitewisdom.db"
   image_analysis:
-    type: "tesseract"
+    interval: 1
+    tesseract:
+      enabled: True
+    google_vision:
+      enabled: False
+      auth_file: "./my-auth-file.json"
 ```
 
 ### Persistence
@@ -68,7 +75,7 @@ InfiniteWisdom:
   [...]
   persistence:
     type: "sql"
-    url: "sqlite:////tmp/infinitewisdom.db"
+    url: "sqlite:///infinitewisdom.db"
 ```
 
 ### Image analysis
@@ -86,7 +93,8 @@ After all is set configure `InfiniteWisdom` like this:
 InfiniteWisdom:
   [...]
   image_analysis:
-    type: "tesseract"
+    tesseract:
+      enabled: True
 ```
 
 It should be noted though that the quality of `tesseract` is not very good given
@@ -106,8 +114,10 @@ then specify it's path in the `InfiniteWisdom` configuration:
 InfiniteWisdom:
   [...]
   image_analysis:
-    type: "google-vision"
-    auth_file: "./googlevision_auth_token.json"
+    google_vision:
+      enabled: True
+      auth_file: "./googlevision_auth_token.json"
+      capacity_per_month: 1000
 ```
 
 #### Microsoft Computer Vision
@@ -122,20 +132,22 @@ Coming...
 
 It's also possible to use multiple analysers at the same time. This
 allows you to use the costly Google Vision API for only a specific amount
-of images a month and use the free tesseract for the rest. To do that
-use `type: "both"` and add the `auth_file` from Google Vision so in the end
+of images a month and use the free tesseract for the rest. To do that 
+simply specify all analysers you want to use next to each other so 
 it looks like this:
 
 ```
 InfiniteWisdom:
   [...]
   image_analysis:
-    type: "both"
-    auth_file: "./googlevision_auth_token.json"
+    tesseract:
+      enabled: True
+    google_vision:
+      enabled: True
+      auth_file: "./googlevision_auth_token.json"
+      capacity_per_month: 1000
+    [...]
 ```
-
-Since many other analysers will be supported this configuration style 
-will probably change in the future.
 
 ## Usage
 

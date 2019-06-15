@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import os
+
 from infinitewisdom.analysis import ImageAnalyser
 
 
@@ -22,15 +22,20 @@ class GoogleVision(ImageAnalyser):
     Google Vision API implementation
     """
 
-    def __init__(self, auth_file_path: str):
+    def __init__(self, auth_file_path: str, monthly_capacity: float = None):
         """
         :param auth_file_path: authentication file for the google vision api
+        :param monthly_capacity: custom monthly capacity (optional)
         """
         # Imports the Google Cloud client library
         from google.cloud import vision
 
         self._auth_file_path = auth_file_path
-        self._auth_id = os.path.split(auth_file_path)[1]
+
+        if monthly_capacity is None:
+            self._monthly_capacity = 1000.0
+        else:
+            self._monthly_capacity = float(monthly_capacity)
 
         # Instantiates a client
         self._client = vision.ImageAnnotatorClient.from_service_account_file(auth_file_path)
@@ -43,7 +48,7 @@ class GoogleVision(ImageAnalyser):
         return 0.9
 
     def get_monthly_capacity(self) -> float:
-        return 1000.0
+        return self._monthly_capacity
 
     def find_text(self, image: bytes):
         from google.cloud.vision import types

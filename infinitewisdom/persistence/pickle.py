@@ -38,10 +38,14 @@ class PicklePersistence(ImageDataPersistence):
         if path is None:
             path = DEFAULT_PICKLE_PERSISTENCE_PATH
 
-        if not os.path.exists(path):
-            raise FileNotFoundError("Path does not exist: {}".format(path))
-        if not os.path.isfile(path):
-            raise NotADirectoryError("Path is not a file: {}".format(path))
+        folder, file = os.path.split(os.path.abspath(path))
+
+        if not os.path.exists(folder):
+            raise FileNotFoundError("Path does not exist: {}".format(folder))
+        if os.path.isfile(folder):
+            raise NotADirectoryError("Path is not a directory: {}".format(folder))
+        if os.path.exists(path) and not os.path.isfile(path):
+            raise IsADirectoryError("Path is not a file: {}".format(path))
 
         self._file_path = path
 
