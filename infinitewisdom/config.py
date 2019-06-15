@@ -22,7 +22,8 @@ import yaml
 from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, PERSISTENCE_TYPE_PICKLE, \
-    DEFAULT_SQL_PERSISTENCE_URL
+    DEFAULT_SQL_PERSISTENCE_URL, CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
+    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH
 
 
 class ConfigEntry:
@@ -42,41 +43,38 @@ class Config:
     LOGGER = logging.getLogger(__name__)
     LOGGER.setLevel(logging.DEBUG)
 
-    BOT_TOKEN = ConfigEntry(
+    TELEGRAM_BOT_TOKEN = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
+            CONFIG_NODE_TELEGRAM,
             "bot_token"
         ],
         default="")
 
-    URL_POOL_SIZE = ConfigEntry(
+    TELEGRAM_INLINE_BADGE_SIZE = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
-            "max_url_pool_size"
-        ],
-        default=10000)
-
-    IMAGE_POLLING_TIMEOUT = ConfigEntry(
-        yaml_path=[
-            CONFIG_NODE_ROOT,
-            "image_polling_timeout"
-        ],
-        default=1)
-
-    INLINE_BADGE_SIZE = ConfigEntry(
-        yaml_path=[
-            CONFIG_NODE_ROOT,
+            CONFIG_NODE_TELEGRAM,
             "inline_badge_size"
         ],
         default=16
     )
 
-    GREETING_MESSAGE = ConfigEntry(
+    TELEGRAM_GREETING_MESSAGE = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
+            CONFIG_NODE_TELEGRAM,
             "greeting_message"
         ],
         default='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
+
+    CRAWLER_TIMEOUT = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_CRAWLER,
+            "timeout"
+        ],
+        default=1.0)
 
     PERSISTENCE_TYPE = ConfigEntry(
         yaml_path=[
@@ -102,25 +100,47 @@ class Config:
         ],
         default=DEFAULT_SQL_PERSISTENCE_URL)
 
-    IMAGE_ANALYSIS_TYPE = ConfigEntry(
+    IMAGE_ANALYSIS_TESSERACT_ENABLED = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
-            "type"
+            CONFIG_NODE_TESSERACT,
+            CONFIG_NODE_ENABLED
         ],
-        default=None)
+        default=False)
+
+    IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_IMAGE_ANALYSIS,
+            CONFIG_NODE_GOOGLE_VISION,
+            CONFIG_NODE_ENABLED
+        ],
+        default=False)
 
     IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
+            CONFIG_NODE_GOOGLE_VISION,
             "auth_file"
         ],
         default=None)
 
-    _config_entries = [BOT_TOKEN, URL_POOL_SIZE, IMAGE_POLLING_TIMEOUT, GREETING_MESSAGE, INLINE_BADGE_SIZE,
+    IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_IMAGE_ANALYSIS,
+            CONFIG_NODE_GOOGLE_VISION,
+            CONFIG_NODE_CAPACITY_PER_MONTH
+        ],
+        default=None)
+
+    _config_entries = [TELEGRAM_BOT_TOKEN, CRAWLER_TIMEOUT, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
                        PERSISTENCE_TYPE, PICKLE_PERSISTENCE_PATH, SQL_PERSISTENCE_URL,
-                       IMAGE_ANALYSIS_TYPE, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE]
+                       IMAGE_ANALYSIS_TESSERACT_ENABLED,
+                       IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE,
+                       IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY]
 
     def __init__(self):
         """
@@ -183,12 +203,10 @@ class Config:
         """
         Validates the current configuration and throws an exception if something is wrong
         """
-        if len(self.BOT_TOKEN.value) <= 0:
+        if len(self.TELEGRAM_BOT_TOKEN.value) <= 0:
             raise AssertionError("Bot token is missing!")
-        if self.IMAGE_POLLING_TIMEOUT.value < 0:
+        if self.CRAWLER_TIMEOUT.value < 0:
             raise AssertionError("Image polling timeout must be >= 0!")
-        if self.URL_POOL_SIZE.value < 0:
-            raise AssertionError("URL pool size must be >= 0!")
 
         if self.PICKLE_PERSISTENCE_PATH.value is not None:
             if not os.path.exists(self.PICKLE_PERSISTENCE_PATH.value):
@@ -198,7 +216,10 @@ class Config:
                 raise IsADirectoryError(
                     "Local persistence path is not a file: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
 
-        if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is not None:
+        if self.IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED.value:
+            if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is None:
+                raise AssertionError("Google Vision authentication file is required")
+            
             if not os.path.isfile(
                     self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value):
                 raise IsADirectoryError("Google Vision Auth file path is not a file: {}".format(

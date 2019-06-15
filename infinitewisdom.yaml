@@ -1,18 +1,22 @@
 ---
 
 InfiniteWisdom:
-  greeting_message: "Hi there!"
-  max_url_pool_size: 10000
-  image_polling_timeout: 1
-  inline_badge_size: 16
-  bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+  telegram:
+    bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+    greeting_message: "Hi there!"
+    inline_badge_size: 16
+  crawler:
+    timeout: 1
   persistence:
     type: "sql"
     url: "sqlite:////tmp/infinitewisdom.db"
-    #path: "/tmp/infinitewisdom.pickle"
+    path: "/home/markus/downloads/dev.pickle"
   image_analysis:
-    type: "tesseract"
-#    type: "google-vision"
-#    auth_file: "./my-auth-file.json"
+    tesseract:
+      enabled: True
+    google_vision:
+      enabled: True
+      auth_file: "./InfiniteWisdom-1522618e7d39.json"
+      capacity_per_month: 100
 
 ...

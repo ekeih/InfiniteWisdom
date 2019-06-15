@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-import os
 from io import BytesIO
 
 from prometheus_client import start_http_server
@@ -27,8 +26,7 @@ from infinitewisdom.analysis.googlevision import GoogleVision
 from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.config import Config
-from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
-    PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL, IMAGE_ANALYSIS_TYPE_BOTH
+from infinitewisdom.const import PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.persistence.pickle import PicklePersistence
@@ -55,7 +53,7 @@ class InfiniteWisdomBot:
         self._persistence = persistence
         self._image_analysers = image_analysers
 
-        self._updater = Updater(token=self._config.BOT_TOKEN.value)
+        self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value)
 
         self._dispatcher = self._updater.dispatcher
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
@@ -85,7 +83,7 @@ class InfiniteWisdomBot:
         """
         self._send_random_quote(bot, update)
         bot.send_message(chat_id=update.message.chat_id,
-                         text=self._config.GREETING_MESSAGE.value)
+                         text=self._config.TELEGRAM_GREETING_MESSAGE.value)
 
     def _command_callback(self, bot: Bot, update: Update) -> None:
         """
@@ -150,7 +148,7 @@ class InfiniteWisdomBot:
             offset = 0
         else:
             offset = int(offset)
-        badge_size = self._config.INLINE_BADGE_SIZE.value
+        badge_size = self._config.TELEGRAM_INLINE_BADGE_SIZE.value
 
         if len(query) > 0:
             entities = self._persistence.find_by_text(query, badge_size, offset)
@@ -205,16 +203,16 @@ if __name__ == '__main__':
         persistence = PicklePersistence(config.PICKLE_PERSISTENCE_PATH.value)
     elif config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
         persistence = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
+    else:
+        raise AssertionError("No persistence was instantiated but is required for execution")
 
     image_analysers = []
-    if config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_TESSERACT \
-            or config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
+    if config.IMAGE_ANALYSIS_TESSERACT_ENABLED.value:
         image_analysers.append(Tesseract())
-    if config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_GOOGLE_VISION \
-            or config.IMAGE_ANALYSIS_TYPE.value == IMAGE_ANALYSIS_TYPE_BOTH:
+    if config.IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED.value:
         auth_file = config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
-        if os.path.isfile(auth_file):
-            image_analysers.append(GoogleVision(auth_file))
+        capacity = config.IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY.value
+        image_analysers.append(GoogleVision(auth_file, capacity))
 
     # start prometheus server
     start_http_server(8000)
