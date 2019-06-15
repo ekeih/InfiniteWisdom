@@ -56,8 +56,24 @@ InfiniteWisdom:
       capacity_per_month: 1000
 ```
 
+### Crawler
+
+The crawler queries the image api source ([http://inspirobot.me](http://inspirobot.me))
+for random images and adds them to the persistence if they don't exist yet.
+To not overwhelm the api it is queried in a specific interval so there 
+is a slight delay between each request.
+
+```
+InfiniteWisdom:
+  [...]
+  crawler:
+    interval: 1
+```
+
 ### Persistence
 
+The persistence is used to store image url's, image analysis data
+and other meta data related to images. 
 `InfiniteWisdom` supports multiple persistence backends.
 
 #### pickle
