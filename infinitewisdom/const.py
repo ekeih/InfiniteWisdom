@@ -47,7 +47,7 @@ CONFIG_NODE_TELEGRAM = "telegram"
 CONFIG_NODE_CRAWLER = "crawler"
 CONFIG_NODE_PERSISTENCE = "persistence"
 CONFIG_NODE_IMAGE_ANALYSIS = "image_analysis"
-CONFIG_NODE_TIMEOUT = "timeout"
+CONFIG_NODE_INTERVAL = "interval"
 
 CONFIG_NODE_TESSERACT = "tesseract"
 CONFIG_NODE_GOOGLE_VISION = "google_vision"

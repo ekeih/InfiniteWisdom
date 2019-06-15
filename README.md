@@ -15,11 +15,11 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_TELEGRAM_BOT_TOKEN                     | The bot token used to authenticate the bot with telegram | `str` | `-` |
 | INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
 | INFINITEWISDOM_TELEGRAM_INLINE_BADGE_SIZE             | Number of items to return in a single inline request badge | `int` | `16` |
-| INFINITEWISDOM_CRAWLER_TIMEOUT                        | Timeout in seconds between image api requests | `float` | `1` |
+| INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
 | INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
 | INFINITEWISDOM_PERSISTENCE_PATH                       | pickle persistence file path | `str` | `/tmp/infinitewisdom.pickle` |
 | INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_TIMEOUT                 | Timeout in seconds between image analysis | `float` | `1` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_INTERVAL                | Interval in seconds for image analysis | `float` | `1` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE | Path of Google Vision auth file | `str` | `None` |
@@ -41,12 +41,12 @@ InfiniteWisdom:
     greeting_message: "Hi there!"
     inline_badge_size: 16
   crawler:
-    timeout: 1
+    interval: 1
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
   image_analysis:
-    timeout: 1
+    interval: 1
     tesseract:
       enabled: True
     google_vision:

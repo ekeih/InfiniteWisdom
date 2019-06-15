@@ -71,7 +71,7 @@ class AnalysisWorker:
         """
         Schedules the next run
         """
-        self._timer = threading.Timer(self._config.IMAGE_ANALYSIS_TIMEOUT.value, self._worker_job)
+        self._timer = threading.Timer(self._config.IMAGE_ANALYSIS_INTERVAL.value, self._worker_job)
         self._timer.start()
 
     def _worker_job(self):

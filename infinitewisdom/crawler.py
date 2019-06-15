@@ -62,7 +62,7 @@ class Crawler:
         """
         Schedules the next run
         """
-        self._timer = threading.Timer(self._config.CRAWLER_TIMEOUT.value, self._crawl_job)
+        self._timer = threading.Timer(self._config.CRAWLER_INTERVAL.value, self._crawl_job)
         self._timer.start()
 
     def _crawl_job(self):

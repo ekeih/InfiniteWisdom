@@ -6,13 +6,13 @@ InfiniteWisdom:
     greeting_message: "Hi there!"
     inline_badge_size: 16
   crawler:
-    timeout: 1
+    interval: 1
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
     #path: "./infinitewisdom.pickle"
   image_analysis:
-    timeout: 1
+    interval: 1
     tesseract:
       enabled: True
     google_vision:

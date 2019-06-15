@@ -23,7 +23,7 @@ from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_
     CONFIG_NODE_ROOT, \
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, DEFAULT_SQL_PERSISTENCE_URL, \
     CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
-    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_TIMEOUT, \
+    CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_INTERVAL, \
     PERSISTENCE_TYPE_SQL, PERSISTENCE_TYPE_PICKLE
 
 
@@ -69,11 +69,11 @@ class Config:
         ],
         default='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
-    CRAWLER_TIMEOUT = ConfigEntry(
+    CRAWLER_INTERVAL = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_CRAWLER,
-            CONFIG_NODE_TIMEOUT
+            CONFIG_NODE_INTERVAL
         ],
         default=1.0)
 
@@ -101,11 +101,11 @@ class Config:
         ],
         default=DEFAULT_SQL_PERSISTENCE_URL)
 
-    IMAGE_ANALYSIS_TIMEOUT = ConfigEntry(
+    IMAGE_ANALYSIS_INTERVAL = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
-            CONFIG_NODE_TIMEOUT
+            CONFIG_NODE_INTERVAL
         ],
         default=1)
 
@@ -146,9 +146,9 @@ class Config:
         default=None)
 
     _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
-                       CRAWLER_TIMEOUT,
+                       CRAWLER_INTERVAL,
                        PERSISTENCE_TYPE, PICKLE_PERSISTENCE_PATH, SQL_PERSISTENCE_URL,
-                       IMAGE_ANALYSIS_TIMEOUT, IMAGE_ANALYSIS_TESSERACT_ENABLED,
+                       IMAGE_ANALYSIS_INTERVAL, IMAGE_ANALYSIS_TESSERACT_ENABLED,
                        IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE,
                        IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY]
 
@@ -215,8 +215,8 @@ class Config:
         """
         if len(self.TELEGRAM_BOT_TOKEN.value) <= 0:
             raise AssertionError("Bot token is missing!")
-        if self.CRAWLER_TIMEOUT.value < 0:
-            raise AssertionError("Image polling timeout must be >= 0!")
+        if self.CRAWLER_INTERVAL.value < 0:
+            raise AssertionError("Image polling interval must be >= 0!")
 
         if self.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
             folder, file = os.path.split(os.path.abspath(self.PICKLE_PERSISTENCE_PATH.value))
