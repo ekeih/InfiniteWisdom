@@ -10,7 +10,7 @@ InfiniteWisdom:
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
-    #path: "#path: "/tmp/infinitewisdom.pickle""
+    #path: "./infinitewisdom.pickle"
   image_analysis:
     timeout: 1
     tesseract:
