@@ -23,6 +23,7 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE | Path of Google Vision auth file | `str` | `None` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `str` | `1000` |
 
 ### yaml file
 
@@ -52,6 +53,7 @@ InfiniteWisdom:
     google_vision:
       enabled: False
       auth_file: "./my-auth-file.json"
+      capacity_per_month: 1000
 ```
 
 ### Persistence
