@@ -136,6 +136,8 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality
             old.text = entity.text
+            old.image_data = entity.image_data
+            old.image_hash = entity.image_hash
 
     def count_items_this_month(self, analyser: str) -> int:
         with self._session_scope() as session:
