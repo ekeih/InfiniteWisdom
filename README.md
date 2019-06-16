@@ -27,7 +27,11 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE | Path of Google Vision auth file | `str` | `None` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `str` | `1000` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `int` | `1000` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED | Enable/Disable the Google Vision image analyser | `bool` | `False` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY | Microsoft Azure Computer Vision subscription key | `str` | `None` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION  | Server region to use. This has to match the region of your subscription key and is the subdomain of the url (f.ex. `francecentral` in `https://francecentral.api.cognitive.microsoft.com/` | `bool` | `False` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `int` | `5000` |
 
 ### yaml file
 
