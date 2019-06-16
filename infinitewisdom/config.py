@@ -67,7 +67,7 @@ class Config:
             CONFIG_NODE_TELEGRAM,
             "greeting_message"
         ],
-        default='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
+        default='Send /inspire for more inspiration :blush: Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
     TELEGRAM_CAPTION_IMAGES_WITH_TEXT = ConfigEntry(
         yaml_path=[
