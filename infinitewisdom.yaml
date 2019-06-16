@@ -19,5 +19,10 @@ InfiniteWisdom:
       enabled: False
       auth_file: "./InfiniteWisdom-1522618e7d39.json"
       capacity_per_month: 100
+    microsoft_azure:
+      enabled: True
+      subscription_key: "1234567890684c3baa5a0605712345ab"
+      region: "francecentral"
+      capacity_per_month: 5000
 
 ...

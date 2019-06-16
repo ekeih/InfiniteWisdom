@@ -58,6 +58,11 @@ InfiniteWisdom:
       enabled: False
       auth_file: "./my-auth-file.json"
       capacity_per_month: 1000
+    microsoft_azure:
+      enabled: False
+      subscription_key: "1234567890684c3baa5a0605712345ab"
+      region: "francecentral"
+      capacity_per_month: 5000
 ```
 
 ### Crawler
@@ -144,7 +149,16 @@ InfiniteWisdom:
 
 #### Microsoft Computer Vision
 
-Coming...
+```
+InfiniteWisdom:
+  [...]
+  image_analysis:
+    microsoft_azure:
+      enabled: False
+      subscription_key: "1234567890684c3baa5a0605712345ab"
+      region: "francecentral"
+      capacity_per_month: 5000
+```
 
 #### Amazon Rekognition
 

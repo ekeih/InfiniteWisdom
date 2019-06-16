@@ -23,6 +23,7 @@ from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHan
 
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.analysis.googlevision import GoogleVision
+from infinitewisdom.analysis.microsoftazure import AzureComputerVision
 from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.config import Config
@@ -212,6 +213,11 @@ if __name__ == '__main__':
         auth_file = config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
         capacity = config.IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY.value
         image_analysers.append(GoogleVision(auth_file, capacity))
+    if config.IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED.value:
+        key = config.IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY.value
+        region = config.IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION.value
+        capacity = config.IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY.value
+        image_analysers.append(AzureComputerVision(key, region, capacity))
 
     # start prometheus server
     start_http_server(8000)
