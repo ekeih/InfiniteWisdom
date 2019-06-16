@@ -17,7 +17,7 @@ import logging
 
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
-    IMAGE_ANALYSIS_HAS_TEXT_COUNT
+    IMAGE_ANALYSIS_HAS_TEXT_COUNT, ENTITIES_WITH_IMAGE_DATA_COUNT
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -227,6 +227,9 @@ class ImageDataPersistence:
         """
         POOL_SIZE.set(self.count())
 
+        entites_with_image_data_count = self.count_items_with_image_data()
+        ENTITIES_WITH_IMAGE_DATA_COUNT.set(entites_with_image_data_count)
+
         uploaded_entites_count = self.count_items_with_telegram_upload()
         TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
 
@@ -255,5 +258,11 @@ class ImageDataPersistence:
     def count_items_with_text(self) -> int:
         """
         :return: the number of images that have a text
+        """
+        raise NotImplementedError()
+
+    def count_items_with_image_data(self) -> int:
+        """
+        :return: the number of images that have a image data
         """
         raise NotImplementedError()

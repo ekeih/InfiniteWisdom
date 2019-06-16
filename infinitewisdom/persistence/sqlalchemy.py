@@ -164,3 +164,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
     def count_items_with_text(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).filter(func.length(Image.text) > 0).count()
+
+    def count_items_with_image_data(self) -> int:
+        with self._session_scope() as session:
+            return session.query(Image).filter(Image.image_data.isnot(None)).count()
