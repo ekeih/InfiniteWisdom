@@ -69,6 +69,14 @@ class Config:
         ],
         default='Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
+    TELEGRAM_CAPTION_IMAGES_WITH_TEXT = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_TELEGRAM,
+            "caption_images_with_text"
+        ],
+        default=False)
+
     CRAWLER_INTERVAL = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
@@ -146,6 +154,7 @@ class Config:
         default=None)
 
     _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
+                       TELEGRAM_CAPTION_IMAGES_WITH_TEXT,
                        CRAWLER_INTERVAL,
                        PERSISTENCE_TYPE, PICKLE_PERSISTENCE_PATH, SQL_PERSISTENCE_URL,
                        IMAGE_ANALYSIS_INTERVAL, IMAGE_ANALYSIS_TESSERACT_ENABLED,
