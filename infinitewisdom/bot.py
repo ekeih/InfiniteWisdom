@@ -147,7 +147,7 @@ class InfiniteWisdomBot:
         :param chat_id: the chat id to send the message to
         :param message: the message to chat (may contain emoji aliases)
         """
-        bot.send_message(chat_id=chat_id, message=emojize(message))
+        bot.send_message(chat_id=chat_id, text=emojize(message))
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, bot: Bot, update: Update) -> None:
