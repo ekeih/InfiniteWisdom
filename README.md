@@ -18,6 +18,7 @@ will always override the value provided in the yaml file.
 |-------------------------------------------------------|------------------------------------------|----------|----------------------------------------|
 | INFINITEWISDOM_TELEGRAM_BOT_TOKEN                     | The bot token used to authenticate the bot with telegram | `str` | `-` |
 | INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
+| INFINITEWISDOM_TELEGRAM_CAPTION_IMAGES_WITH_TEXT      | Specifies whether to caption images with their text | `bool` | `False` |
 | INFINITEWISDOM_TELEGRAM_INLINE_BADGE_SIZE             | Number of items to return in a single inline request badge | `int` | `16` |
 | INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
 | INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
@@ -45,6 +46,7 @@ InfiniteWisdom:
     bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     greeting_message: "Hi there!"
     inline_badge_size: 16
+    caption_images_with_text: True
   crawler:
     interval: 1
   persistence:
