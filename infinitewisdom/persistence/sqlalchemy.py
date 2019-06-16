@@ -17,7 +17,7 @@ import logging
 import time
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, or_
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -104,7 +104,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
         with self._session_scope() as session:
             filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
-            return session.query(Image).filter(or_(*filters)).limit(limit).offset(offset).all()
+            return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
 
     def find_non_optimal(self, target_quality: int) -> Entity or None:
         with self._session_scope() as session:
