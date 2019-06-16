@@ -17,6 +17,7 @@
 import logging
 from io import BytesIO
 
+from emoji import emojize
 from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
@@ -82,8 +83,8 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         """
         self._send_random_quote(bot, update)
-        bot.send_message(chat_id=update.message.chat_id,
-                         text=self._config.TELEGRAM_GREETING_MESSAGE.value)
+        self._send_message(bot=bot, chat_id=update.message.chat_id,
+                           message=self._config.TELEGRAM_GREETING_MESSAGE.value)
 
     def _command_callback(self, bot: Bot, update: Update) -> None:
         """
@@ -100,7 +101,9 @@ class InfiniteWisdomBot:
         :param bot: the bot
         :param update: the chat update object
         """
-        bot.send_chat_action(chat_id=update.message.chat_id, action=ChatAction.TYPING)
+        chat_id = update.message.chat_id
+
+        bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         entity = self._persistence.get_random()
         LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
 
@@ -132,6 +135,15 @@ class InfiniteWisdomBot:
 
         message = bot.send_photo(chat_id=chat_id, photo=photo)
         return message.photo[-1].file_id
+
+    def _send_message(self, bot: Bot, chat_id: str, message: str):
+        """
+        Sends a text message to the given chat
+        :param bot: the bot
+        :param chat_id: the chat id to send the message to
+        :param message: the message to chat (may contain emoji aliases)
+        """
+        bot.send_message(chat_id=chat_id, message=emojize(message))
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, bot: Bot, update: Update) -> None:
