@@ -109,11 +109,11 @@ class InfiniteWisdomBot:
 
         if entity.telegram_file_id is None:
             image_bytes = download_image_bytes(entity.url)
-            file_id = self._send_photo(bot=bot, chat_id=update.message.chat_id, image_data=image_bytes)
+            file_id = self._send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes)
             entity.telegram_file_id = file_id
             self._persistence.update(entity)
         else:
-            self._send_photo(bot=bot, chat_id=update.message.chat_id, file_id=entity.telegram_file_id)
+            self._send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id)
 
     @staticmethod
     def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None) -> int:
