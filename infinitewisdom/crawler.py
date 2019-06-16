@@ -13,7 +13,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import hashlib
 import logging
 import threading
 import time
@@ -23,19 +22,10 @@ import requests
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
-from infinitewisdom.util import download_image_bytes
+from infinitewisdom.util import download_image_bytes, create_hash
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
-
-
-def create_hash(data: bytes) -> str:
-    """
-    Creates a hash of the given bytes
-    :param data: data to hash
-    :return: hash
-    """
-    return hashlib.md5(data).hexdigest()
 
 
 class Crawler:

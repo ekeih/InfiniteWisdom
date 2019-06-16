@@ -32,7 +32,7 @@ from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
-from infinitewisdom.util import download_image_bytes
+from infinitewisdom.util import download_image_bytes, create_hash
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -109,13 +109,20 @@ class InfiniteWisdomBot:
         if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
             caption = entity.text
 
-        if entity.telegram_file_id is None:
-            image_bytes = download_image_bytes(entity.url)
-            file_id = self._send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
-            entity.telegram_file_id = file_id
-            self._persistence.update(entity)
-        else:
+        if entity.telegram_file_id is not None:
             self._send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
+            return
+
+        if entity.image_data is not None:
+            image_bytes = entity.image_data
+        else:
+            image_bytes = download_image_bytes(entity.url)
+            entity.image_data = image_bytes
+            entity.image_hash = create_hash(image_bytes)
+
+        file_id = self._send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+        entity.telegram_file_id = file_id
+        self._persistence.update(entity)
 
     @staticmethod
     def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,

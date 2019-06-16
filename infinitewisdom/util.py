@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+import hashlib
 import logging
 
 import requests
@@ -34,6 +34,15 @@ def download_image_bytes(url: str) -> bytes:
     image.raise_for_status()
     LOGGER.debug('Fetched image from: {}'.format(url))
     return image.content
+
+
+def create_hash(data: bytes) -> str:
+    """
+    Creates a hash of the given bytes
+    :param data: data to hash
+    :return: hash
+    """
+    return hashlib.md5(data).hexdigest()
 
 
 def select_best_available_analyser(analysers: [ImageAnalyser],
