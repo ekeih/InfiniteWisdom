@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+import hashlib
 import logging
 import threading
 import time
@@ -23,9 +23,19 @@ import requests
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
+from infinitewisdom.util import download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+
+def create_hash(data: bytes) -> str:
+    """
+    Creates a hash of the given bytes
+    :param data: data to hash
+    :return: hash
+    """
+    return hashlib.md5(data).hexdigest()
 
 
 class Crawler:
@@ -83,11 +93,41 @@ class Crawler:
         """
         url = self._fetch_generated_image_url()
 
-        if len(self._persistence.find_by_url(url)) > 0:
-            LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
-            return None
+        existing = self._persistence.find_by_url(url)
+        if len(existing) > 0:
+            for entity in existing:
+                if entity.image_data is None:
+                    try:
+                        image_data = download_image_bytes(url)
+                        image_hash = create_hash(image_data)
+                    except:
+                        LOGGER.debug(
+                            "Entity with url '{}' already in persistence but downloading image data failed so the entity is deleted.".format(
+                                url))
+                        self._persistence.delete(entity.url)
+                        continue
 
-        entity = Entity(url, None, None, None, time.time(), None)
+                    entity.image_data = image_data
+                    entity.image_hash = image_hash
+                    self._persistence.update(entity)
+                    LOGGER.debug(
+                        "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
+                    return None
+                else:
+                    LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
+                    return None
+
+        image_data = download_image_bytes(url)
+        image_hash = create_hash(image_data)
+
+        entity = Entity(url=url,
+                        text=None,
+                        analyser=None,
+                        analyser_quality=None,
+                        telegram_file_id=None,
+                        image_data=image_data,
+                        image_hash=image_hash,
+                        created=time.time())
         self._persistence.add(entity)
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))
 

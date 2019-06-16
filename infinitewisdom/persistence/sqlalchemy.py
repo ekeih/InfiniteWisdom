@@ -17,7 +17,7 @@ import logging
 import time
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -31,6 +31,9 @@ Base = declarative_base()
 
 
 class Image(Base, Entity):
+    """
+    Data model of a single quote
+    """
     __tablename__ = 'images'
 
     id = Column(Integer, primary_key=True)
@@ -41,6 +44,8 @@ class Image(Base, Entity):
     analyser_quality = Column(Float)
     created = Column(Float)
     telegram_file_id = Column(String)
+    image_data = Column(LargeBinary)
+    image_hash = Column(String)
 
 
 class SQLAlchemyPersistence(ImageDataPersistence):
@@ -74,11 +79,13 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         finally:
             session.close()
 
-    def _add(self, entity: Entity) -> bool:
+    def _add(self, entity: Entity):
         image = Image(url=entity.url,
                       text=entity.text,
                       analyser=entity.analyser, analyser_quality=entity.analyser_quality,
                       telegram_file_id=entity.telegram_file_id,
+                      image_data=entity.image_data,
+                      image_hash=entity.image_hash,
                       created=entity.created)
 
         with self._session_scope(write=True) as session:
@@ -108,13 +115,15 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def find_non_optimal(self, target_quality: int) -> Entity or None:
         with self._session_scope() as session:
-            entity = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(Image.created).first()
+            entity = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(
+                Image.created).first()
             if entity is not None:
                 return entity
 
             return session.query(Image).filter(Image.analyser_quality.isnot(None),
-                                               Image.analyser_quality < target_quality).order_by(Image.analyser_quality,
-                                                                                                 Image.created).first()
+                                               Image.analyser_quality < target_quality).order_by(
+                Image.analyser_quality,
+                Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:

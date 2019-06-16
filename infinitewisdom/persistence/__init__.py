@@ -22,19 +22,22 @@ from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALY
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
+
 class Entity:
     """
     Persistence entity
     """
 
-    def __init__(self, url: str, text: str, analyser: str, analyser_quality: float, created: float,
-                 telegram_file_id: str or None):
+    def __init__(self, url: str, text: str or None, analyser: str or None, analyser_quality: float or None,
+                 created: float, image_data: bytes or None, image_hash: str or None, telegram_file_id: str or None):
         self.url = url
         self.text = text
         self.analyser = analyser
         self._analyser_quality = analyser_quality
         self.created = created
         self._telegram_file_id = telegram_file_id
+        self._image_data = image_data
+        self._image_hash = image_hash
 
     @property
     def telegram_file_id(self):
@@ -52,32 +55,46 @@ class Entity:
     def analyser_quality(self, value):
         self._telegram_file_id = value
 
+    @property
+    def image_data(self):
+        return self.__dict__.get('image_data', None)
+
+    @image_data.setter
+    def image_data(self, value):
+        self._image_data = value
+
+    @property
+    def image_hash(self):
+        return self.__dict__.get('image_hash', None)
+
+    @image_hash.setter
+    def image_hash(self, value):
+        self._image_hash = value
+
 
 class ImageDataPersistence:
     """
     Persistence base class
     """
 
-    def add(self, entity: Entity) -> bool:
+    def add(self, entity: Entity) -> None:
         """
         Persists a new entity
         :param entity: the entity to add
-        :return: true when the entity was added, false otherwise
         """
         try:
             if len(self.find_by_url(entity.url)) > 0:
                 LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
-                return False
+                return
 
-            return self._add(entity)
+            self._add(entity)
         finally:
             self._update_stats()
 
-    def _add(self, entity: Entity) -> bool:
+    def _add(self, entity: Entity) -> None:
         """
         Persists a new entity
         :param entity: the entity to add
-        :return: true when the entity was added, false otherwise
         """
         raise NotImplementedError()
 

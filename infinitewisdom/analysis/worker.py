@@ -95,7 +95,10 @@ class AnalysisWorker:
                         entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
                 return
 
-            image = download_image_bytes(entity.url)
+            if entity.image_data is None:
+                image = download_image_bytes(entity.url)
+            else:
+                image = entity.image_data
 
             old_analyser = entity.analyser
             old_quality = entity.analyser_quality

@@ -21,10 +21,10 @@ import yaml
 
 from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
-    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_PICKLE_PERSISTENCE_PATH, DEFAULT_SQL_PERSISTENCE_URL, \
+    CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_SQL_PERSISTENCE_URL, \
     CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
     CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_INTERVAL, \
-    PERSISTENCE_TYPE_SQL, PERSISTENCE_TYPE_PICKLE
+    PERSISTENCE_TYPE_SQL
 
 
 class ConfigEntry:
@@ -93,14 +93,6 @@ class Config:
         ],
         default=PERSISTENCE_TYPE_SQL)
 
-    PICKLE_PERSISTENCE_PATH = ConfigEntry(
-        yaml_path=[
-            CONFIG_NODE_ROOT,
-            CONFIG_NODE_PERSISTENCE,
-            "path"
-        ],
-        default=DEFAULT_PICKLE_PERSISTENCE_PATH)
-
     SQL_PERSISTENCE_URL = ConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
@@ -156,7 +148,7 @@ class Config:
     _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
                        TELEGRAM_CAPTION_IMAGES_WITH_TEXT,
                        CRAWLER_INTERVAL,
-                       PERSISTENCE_TYPE, PICKLE_PERSISTENCE_PATH, SQL_PERSISTENCE_URL,
+                       PERSISTENCE_TYPE, SQL_PERSISTENCE_URL,
                        IMAGE_ANALYSIS_INTERVAL, IMAGE_ANALYSIS_TESSERACT_ENABLED,
                        IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE,
                        IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY]
@@ -226,15 +218,6 @@ class Config:
             raise AssertionError("Bot token is missing!")
         if self.CRAWLER_INTERVAL.value < 0:
             raise AssertionError("Image polling interval must be >= 0!")
-
-        if self.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
-            folder, file = os.path.split(os.path.abspath(self.PICKLE_PERSISTENCE_PATH.value))
-            if not os.path.exists(folder):
-                raise FileNotFoundError(
-                    "Local persistence path does not exist: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
-            if os.path.isfile(folder):
-                raise NotADirectoryError(
-                    "Local persistence parent path is not a directory: {}".format(self.PICKLE_PERSISTENCE_PATH.value))
 
         if self.IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED.value:
             if self.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value is None:

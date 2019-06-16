@@ -1,10 +1,9 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 
-from infinitewisdom.persistence.pickle import PicklePersistence
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 
-p1 = PicklePersistence(path="/var/infinite-wisdom/infinitewisdom.pickle")
-p2 = SQLAlchemyPersistence()
+p1 = SQLAlchemyPersistence(url="sqlite:///source_infinitewisdom.pickle")
+p2 = SQLAlchemyPersistence(url="sqlite:///target_infinitewisdom.pickle")
 
 p1_total = p1.count()
 added = 0
@@ -30,6 +29,7 @@ def migrate_entity(entity):
 
 
 with ThreadPoolExecutor(max_workers=4, thread_name_prefix="db-migration") as executor:
+    # TODO: currently this does not work because there is no interface method to query "all" items
     for e in p1._entities:
         future = executor.submit(migrate_entity, e)
 

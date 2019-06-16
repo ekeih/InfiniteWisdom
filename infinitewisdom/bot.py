@@ -27,10 +27,9 @@ from infinitewisdom.analysis.googlevision import GoogleVision
 from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.config import Config
-from infinitewisdom.const import PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL
+from infinitewisdom.const import PERSISTENCE_TYPE_SQL
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.persistence.pickle import PicklePersistence
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 from infinitewisdom.util import download_image_bytes
@@ -214,9 +213,7 @@ if __name__ == '__main__':
     config = Config()
 
     persistence = None
-    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
-        persistence = PicklePersistence(config.PICKLE_PERSISTENCE_PATH.value)
-    elif config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
+    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
         persistence = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
     else:
         raise AssertionError("No persistence was instantiated but is required for execution")
