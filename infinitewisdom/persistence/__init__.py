@@ -15,88 +15,53 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 
-from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
+from infinitewisdom.config import Config
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, PERSISTENCE_TYPE_SQL
+from infinitewisdom.persistence.image_persistence import ImageDataStore
+from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Entity
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
     IMAGE_ANALYSIS_HAS_TEXT_COUNT, ENTITIES_WITH_IMAGE_DATA_COUNT
+from infinitewisdom.util import create_hash
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 
-class Entity:
-    """
-    Persistence entity
-    """
-
-    def __init__(self, url: str, text: str or None, analyser: str or None, analyser_quality: float or None,
-                 created: float, image_data: bytes or None, image_hash: str or None, telegram_file_id: str or None):
-        self.url = url
-        self.text = text
-        self.analyser = analyser
-        self._analyser_quality = analyser_quality
-        self.created = created
-        self._telegram_file_id = telegram_file_id
-        self._image_data = image_data
-        self._image_hash = image_hash
-
-    @property
-    def telegram_file_id(self):
-        return self.__dict__.get('telegram_file_id', None)
-
-    @telegram_file_id.setter
-    def telegram_file_id(self, value):
-        self._telegram_file_id = value
-
-    @property
-    def analyser_quality(self):
-        return self.__dict__.get('analyser_quality', None)
-
-    @analyser_quality.setter
-    def analyser_quality(self, value):
-        self._telegram_file_id = value
-
-    @property
-    def image_data(self):
-        return self.__dict__.get('image_data', None)
-
-    @image_data.setter
-    def image_data(self, value):
-        self._image_data = value
-
-    @property
-    def image_hash(self):
-        return self.__dict__.get('image_hash', None)
-
-    @image_hash.setter
-    def image_hash(self, value):
-        self._image_hash = value
-
-
 class ImageDataPersistence:
     """
-    Persistence base class
+    Persistence main class
     """
 
-    def add(self, entity: Entity) -> None:
+    def __init__(self, config: Config):
+        self._config = config
+
+        if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
+            self._database = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
+        else:
+            raise AssertionError("No persistence was instantiated but is required for execution")
+
+        self._image_data_store = ImageDataStore(config.FILE_PERSISTENCE_BASE_PATH.value)
+
+        self._update_stats()
+
+    def add(self, entity: Entity, image_data: bytes or None) -> None:
         """
         Persists a new entity
         :param entity: the entity to add
+        :param image_data: image data
         """
         try:
             if len(self.find_by_url(entity.url)) > 0:
                 LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
                 return
 
-            self._add(entity)
+            entity = self._database.add(entity)
+
+            if image_data is not None:
+                image_hash = create_hash(image_data)
+                self._image_data_store.put(entity.id, image_hash, image_data)
         finally:
             self._update_stats()
-
-    def _add(self, entity: Entity) -> None:
-        """
-        Persists a new entity
-        :param entity: the entity to add
-        """
-        raise NotImplementedError()
 
     def get_random(self, page_size: int = None) -> Entity or [Entity]:
         """
@@ -105,7 +70,7 @@ class ImageDataPersistence:
         :param page_size: number of elements to return
         :return: the entity
         """
-        raise NotImplementedError()
+        return self._database.get_random(page_size)
 
     def find_by_url(self, url: str) -> [Entity]:
         """
@@ -113,7 +78,7 @@ class ImageDataPersistence:
         :param url: the url to search for
         :return: list of entities
         """
-        raise NotImplementedError()
+        return self._database.find_by_url(url)
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         """
@@ -123,7 +88,7 @@ class ImageDataPersistence:
         :param offset: item offset
         :return: list of entities
         """
-        raise NotImplementedError()
+        return self._database.find_by_text(text, limit, offset)
 
     def find_non_optimal(self, target_quality: int) -> Entity or None:
         """
@@ -136,45 +101,48 @@ class ImageDataPersistence:
         :param target_quality: the target quality to reach
         :return: a non-optimal entity or None
         """
-        raise NotImplementedError()
+        return self._database.find_non_optimal(target_quality)
 
     def find_without_image_data(self) -> [Entity]:
         """
         Finds entities without image data
         :return: list of entities without image data
         """
-        raise NotImplementedError()
+        return self._database.find_without_image_data()
 
     def find_not_uploaded(self) -> Entity or None:
         """
         Finds an image that has not yet been uploaded to telegram servers
         :return: entity or None
         """
-        raise NotImplementedError()
+        return self._database.find_not_uploaded()
 
     def count(self) -> int:
         """
         Returns the total number of entities stored in this persistence
         :return: total count
         """
-        raise NotImplementedError()
+        return self._database.count()
 
-    def update(self, entity: Entity) -> None:
+    def update(self, entity: Entity, image_data: bytes or None) -> None:
         """
         Updates the given entity
         :param entity: the entity with modified fields
+        :param image_data: the image data of the entity
         """
         try:
-            self._update(entity)
+            existing_entity = self._database.find_by_id(entity.id)
+
+            new_hash = None
+            if image_data is not None:
+                new_hash = create_hash(image_data)
+                entity.image_hash = new_hash
+
+            if new_hash is not None and existing_entity.image_hash != new_hash:
+                self._image_data_store.put(entity.id, entity.image_hash, image_data)
+            self._database.update(entity)
         finally:
             self._update_stats()
-
-    def _update(self, entity: Entity) -> None:
-        """
-        Updates the given entity
-        :param entity: the entity with modified fields
-        """
-        raise NotImplementedError()
 
     def count_items_this_month(self, analyser: str) -> int:
         """
@@ -182,7 +150,7 @@ class ImageDataPersistence:
         :param analyser: analyser to check
         :return: number of items
         """
-        raise NotImplementedError()
+        return self._database.count_items_by_analyser(analyser)
 
     def delete(self, url: str) -> None:
         """
@@ -190,31 +158,22 @@ class ImageDataPersistence:
         :param url: the image url
         """
         try:
-            self._delete(url)
+            entity = self._database.find_by_url(url)
+            self._image_data_store.put(entity.id, entity.image_hash, None)
+
+            self._database.delete(url)
         finally:
             self._update_stats()
-
-    def _delete(self, url: str) -> None:
-        """
-        Removes an entity from the persistence
-        :param url: the image url
-        """
-        raise NotImplementedError()
 
     def clear(self) -> None:
         """
         Removes all entries from the persistence
         """
         try:
-            self._clear()
+            self._database.clear()
+            self._image_data_store.clear()
         finally:
             self._update_stats()
-
-    def _clear(self) -> None:
-        """
-        Removes all entries from the persistence
-        """
-        raise NotImplementedError()
 
     @staticmethod
     def _contains_words(words: [str], text):
@@ -260,23 +219,23 @@ class ImageDataPersistence:
         """
         :return: the number of images that have been uploaded to telegram servers
         """
-        raise NotImplementedError()
+        return self._database.count_items_with_telegram_upload()
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         """
         :param analyser_id: analyser id to count
         :return: the number of images that have been analysed by the given analyser
         """
-        raise NotImplementedError()
+        return self._database.count_items_by_analyser(analyser_id)
 
     def count_items_with_text(self) -> int:
         """
         :return: the number of images that have a text
         """
-        raise NotImplementedError()
+        return self._database.count_items_with_text()
 
     def count_items_with_image_data(self) -> int:
         """
         :return: the number of images that have a image data
         """
-        raise NotImplementedError()
+        return self._database.count_items_with_image_data()

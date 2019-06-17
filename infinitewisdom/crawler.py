@@ -55,7 +55,7 @@ class Crawler(RegularIntervalWorker):
         existing = self._persistence.find_by_url(url)
         if len(existing) > 0:
             for entity in existing:
-                if entity.image_data is None:
+                if entity.image_hash is None:
                     try:
                         image_data = download_image_bytes(url)
                         image_hash = create_hash(image_data)
@@ -66,9 +66,8 @@ class Crawler(RegularIntervalWorker):
                         self._persistence.delete(entity.url)
                         continue
 
-                    entity.image_data = image_data
                     entity.image_hash = image_hash
-                    self._persistence.update(entity)
+                    self._persistence.update(entity, image_data)
                     LOGGER.debug(
                         "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
                     return None
@@ -84,10 +83,9 @@ class Crawler(RegularIntervalWorker):
                         analyser=None,
                         analyser_quality=None,
                         telegram_file_id=None,
-                        image_data=image_data,
                         image_hash=image_hash,
                         created=time.time())
-        self._persistence.add(entity)
+        self._persistence.add(entity, image_data)
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))
 
         return url

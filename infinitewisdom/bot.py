@@ -25,10 +25,8 @@ from infinitewisdom.analysis.googlevision import GoogleVision
 from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.config import Config
-from infinitewisdom.const import PERSISTENCE_TYPE_SQL
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 from infinitewisdom.uploader import TelegramUploader
 from infinitewisdom.util import download_image_bytes, create_hash, _send_photo, _send_message
@@ -112,16 +110,15 @@ class InfiniteWisdomBot:
             _send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
             return
 
-        if entity.image_data is not None:
-            image_bytes = entity.image_data
+        if entity.image_hash is not None:
+            image_bytes = self._persistence._image_data_store.get(entity.id, entity.image_hash)
         else:
             image_bytes = download_image_bytes(entity.url)
-            entity.image_data = image_bytes
             entity.image_hash = create_hash(image_bytes)
 
         file_id = _send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
         entity.telegram_file_id = file_id
-        self._persistence.update(entity)
+        self._persistence.update(entity, image_bytes)
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, bot: Bot, update: Update) -> None:
@@ -187,11 +184,7 @@ class InfiniteWisdomBot:
 if __name__ == '__main__':
     config = Config()
 
-    persistence = None
-    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
-        persistence = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
-    else:
-        raise AssertionError("No persistence was instantiated but is required for execution")
+    persistence = ImageDataPersistence(config)
 
     image_analysers = []
     if config.IMAGE_ANALYSIS_TESSERACT_ENABLED.value:

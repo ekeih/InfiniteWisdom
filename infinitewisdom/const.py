@@ -19,6 +19,7 @@ Holds important constants
 """
 
 DEFAULT_SQL_PERSISTENCE_URL = "sqlite:///infinitewisdom.db"
+DEFAULT_FILE_PERSISTENCE_BASE_PATH = "./.image_data"
 
 CONFIG_FILE_NAME = "infinitewisdom"
 

@@ -75,12 +75,11 @@ class AnalysisWorker(RegularIntervalWorker):
                     entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
             return
 
-        if entity.image_data is None:
-            image = download_image_bytes(entity.url)
-            entity.image_data = image
-            entity.image_hash = create_hash(image)
+        if entity.image_hash is None:
+            image_data = download_image_bytes(entity.url)
+            entity.image_hash = create_hash(image_data)
         else:
-            image = entity.image_data
+            image_data = self._persistence._image_data_store.get(entity.id, entity.image_hash)
 
         old_analyser = entity.analyser
         old_quality = entity.analyser_quality
@@ -89,9 +88,9 @@ class AnalysisWorker(RegularIntervalWorker):
 
         entity.analyser = analyser.get_identifier()
         entity.analyser_quality = analyser.get_quality()
-        entity.text = analyser.find_text(image)
+        entity.text = analyser.find_text(image_data)
 
-        self._persistence.update(entity)
+        self._persistence.update(entity, image_data)
         LOGGER.debug(
             "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {})".format(
                 entity.url, analyser.get_identifier(), old_analyser, entity.analyser_quality - old_quality,

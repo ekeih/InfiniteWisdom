@@ -22,7 +22,6 @@ from emoji import emojize
 from telegram import Bot
 
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.persistence import ImageDataPersistence
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -48,8 +47,7 @@ def create_hash(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
 
 
-def select_best_available_analyser(analysers: [ImageAnalyser],
-                                   persistence: ImageDataPersistence) -> ImageAnalyser or None:
+def select_best_available_analyser(analysers: [ImageAnalyser], persistence) -> ImageAnalyser or None:
     """
     Selects the best available analyser based on it's quality and remaining capacity
     :param analysers: the analysers to choose from

@@ -17,17 +17,60 @@ import logging
 import time
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, LargeBinary
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
-from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 Base = declarative_base()
+
+
+class Entity:
+    """
+    Persistence entity
+    """
+
+    def __init__(self, url: str, text: str or None, analyser: str or None, analyser_quality: float or None,
+                 created: float, image_hash: str or None, telegram_file_id: str or None):
+        self.url = url
+        self.text = text
+        self.analyser = analyser
+        self._analyser_quality = analyser_quality
+        self.created = created
+        self._telegram_file_id = telegram_file_id
+        self._image_hash = image_hash
+
+    @property
+    def id(self):
+        return self.__dict__.get('id', None)
+
+    @property
+    def telegram_file_id(self):
+        return self.__dict__.get('telegram_file_id', None)
+
+    @telegram_file_id.setter
+    def telegram_file_id(self, value):
+        self._telegram_file_id = value
+
+    @property
+    def analyser_quality(self):
+        return self.__dict__.get('analyser_quality', None)
+
+    @analyser_quality.setter
+    def analyser_quality(self, value):
+        self._telegram_file_id = value
+
+    @property
+    def image_hash(self):
+        return self.__dict__.get('image_hash', None)
+
+    @image_hash.setter
+    def image_hash(self, value):
+        self._image_hash = value
 
 
 class Image(Base, Entity):
@@ -44,11 +87,10 @@ class Image(Base, Entity):
     analyser_quality = Column(Float)
     created = Column(Float)
     telegram_file_id = Column(String)
-    image_data = Column(LargeBinary)
     image_hash = Column(String)
 
 
-class SQLAlchemyPersistence(ImageDataPersistence):
+class SQLAlchemyPersistence:
     """
     Implementation using SQLAlchemy
     """
@@ -62,7 +104,6 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
         self._sessionmaker = sessionmaker(bind=self._engine)
 
-        self._update_stats()
         LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count()))
 
     @contextmanager
@@ -79,17 +120,16 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         finally:
             session.close()
 
-    def _add(self, entity: Entity):
+    def add(self, entity: Entity):
         image = Image(url=entity.url,
                       text=entity.text,
                       analyser=entity.analyser, analyser_quality=entity.analyser_quality,
                       telegram_file_id=entity.telegram_file_id,
-                      image_data=entity.image_data,
                       image_hash=entity.image_hash,
                       created=entity.created)
 
         with self._session_scope(write=True) as session:
-            session.add(image)
+            return session.add(image)
 
     def get_random(self, page_size: int = None) -> Entity or [Entity]:
         with self._session_scope() as session:
@@ -98,6 +138,10 @@ class SQLAlchemyPersistence(ImageDataPersistence):
                 return query.first()
             else:
                 return query.all()
+
+    def find_by_id(self, entity_id: int) -> [Entity]:
+        with self._session_scope() as session:
+            return session.query(Image).filter_by(id=entity_id).first()
 
     def find_by_url(self, url: str) -> [Entity]:
         with self._session_scope() as session:
@@ -127,27 +171,25 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def find_without_image_data(self) -> Entity or None:
         with self._session_scope() as session:
-            return session.query(Image).filter(Image.image_data.is_(None)).order_by(
+            return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
                 Image.created).all()
 
     def find_not_uploaded(self) -> Entity or None:
         with self._session_scope() as session:
             return session.query(Image).filter(
-                and_(Image.telegram_file_id.is_(None), Image.image_data.isnot(None))).order_by(
-                Image.created).first()
+                and_(Image.telegram_file_id.is_(None), Image.image_hash.isnot(None))).order_by(Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).count()
 
-    def _update(self, entity: Entity) -> None:
+    def update(self, entity: Entity) -> None:
         with self._session_scope(write=True) as session:
             old = session.query(Image).filter_by(url=entity.url).first()
             old.telegram_file_id = entity.telegram_file_id
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality
             old.text = entity.text
-            old.image_data = entity.image_data
             old.image_hash = entity.image_hash
 
     def count_items_this_month(self, analyser: str) -> int:
@@ -155,14 +197,14 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             return session.query(Image).filter(Image.analyser == analyser).filter(
                 Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
-    def _delete(self, url: str) -> None:
+    def delete(self, url: str) -> None:
         with self._session_scope(write=True) as session:
             entity = session.query(Image).filter_by(url=url).first()
             if entity is not None:
                 return session.delete(entity)
 
-    def _clear(self) -> None:
-        pass
+    def clear(self) -> None:
+        raise NotImplementedError()
 
     def count_items_with_telegram_upload(self) -> int:
         with self._session_scope() as session:
@@ -178,4 +220,4 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def count_items_with_image_data(self) -> int:
         with self._session_scope() as session:
-            return session.query(Image).filter(Image.image_data.isnot(None)).count()
+            return session.query(Image).filter(Image.image_hash.isnot(None)).count()
