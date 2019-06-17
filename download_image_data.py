@@ -21,7 +21,7 @@ total = len(entities)
 progress = tqdm(total=total, unit_scale=True, mininterval=1)
 
 
-def migrate_entity(executor, entity):
+def migrate_entity(entity):
     global added
     global skipped
     global deleted
@@ -55,14 +55,12 @@ def migrate_entity(executor, entity):
     except Exception as e:
         errored += 1
         print(e)
-        executor.submit(migrate_entity, executor, entity)
     finally:
         current = added + deleted + skipped + errored
 
 
 with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
-    for e in entities[71682:]:
-        future = executor.submit(migrate_entity, executor, e)
-        # migrate_entity(None, e)
+    for e in entities:
+        future = executor.submit(migrate_entity, e)
 
 print("Added {}\nDeleted {}\nSkipped {}\nTotal {} ".format(added, deleted, skipped, total))
