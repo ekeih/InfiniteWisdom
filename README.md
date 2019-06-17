@@ -20,6 +20,8 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
 | INFINITEWISDOM_TELEGRAM_CAPTION_IMAGES_WITH_TEXT      | Specifies whether to caption images with their text | `bool` | `False` |
 | INFINITEWISDOM_TELEGRAM_INLINE_BADGE_SIZE             | Number of items to return in a single inline request badge | `int` | `16` |
+| INFINITEWISDOM_UPLOADER_INTERVAL                      | Interval in seconds for image uploader messages | `float` | `1` |
+| INFINITEWISDOM_UPLOADER_CHAT_ID                       | Chat id to send messages to | `str` | `None` |
 | INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
 | INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
 | INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
@@ -46,6 +48,9 @@ InfiniteWisdom:
     greeting_message: "Hi there!"
     inline_badge_size: 16
     caption_images_with_text: True
+  uploader:
+    chat_id: "12345678"
+    interval: 1
   crawler:
     interval: 1
   persistence:

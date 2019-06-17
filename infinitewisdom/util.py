@@ -15,8 +15,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import hashlib
 import logging
+from io import BytesIO
 
 import requests
+from emoji import emojize
+from telegram import Bot
 
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.persistence import ImageDataPersistence
@@ -72,3 +75,36 @@ def select_best_available_analyser(analysers: [ImageAnalyser],
         return None
     else:
         return sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
+
+
+def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,
+                caption: str = None) -> int:
+    """
+    Sends a photo to the given chat
+    :param bot: the bot
+    :param chat_id: the chat id to send the image to
+    :param image_data: the image data
+    :param caption: an optional image caption
+    :return: telegram image file id
+    """
+    if image_data is not None:
+        image_bytes_io = BytesIO(image_data)
+        image_bytes_io.name = 'inspireme.jpeg'
+        photo = image_bytes_io
+    elif file_id is not None:
+        photo = file_id
+    else:
+        raise ValueError("At least one of file_id and image_data has to be provided!")
+
+    message = bot.send_photo(chat_id=chat_id, photo=photo, caption=caption)
+    return message.photo[-1].file_id
+
+
+def _send_message(bot: Bot, chat_id: str, message: str):
+    """
+    Sends a text message to the given chat
+    :param bot: the bot
+    :param chat_id: the chat id to send the message to
+    :param message: the message to chat (may contain emoji aliases)
+    """
+    bot.send_message(chat_id=chat_id, text=emojize(message, use_aliases=True))

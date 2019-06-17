@@ -24,7 +24,7 @@ from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_SQL_PERSISTENCE_URL, \
     CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
     CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_INTERVAL, \
-    PERSISTENCE_TYPE_SQL
+    PERSISTENCE_TYPE_SQL, CONFIG_NODE_UPLOADER
 
 
 class ConfigEntry:
@@ -76,6 +76,22 @@ class Config:
             "caption_images_with_text"
         ],
         default=False)
+
+    UPLOADER_INTERVAL = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_UPLOADER,
+            CONFIG_NODE_INTERVAL
+        ],
+        default=1)
+
+    UPLOADER_CHAT_ID = ConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_UPLOADER,
+            "chat_id"
+        ],
+        default=None)
 
     CRAWLER_INTERVAL = ConfigEntry(
         yaml_path=[
@@ -147,6 +163,8 @@ class Config:
 
     _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
                        TELEGRAM_CAPTION_IMAGES_WITH_TEXT,
+                       UPLOADER_CHAT_ID,
+                       UPLOADER_INTERVAL,
                        CRAWLER_INTERVAL,
                        PERSISTENCE_TYPE, SQL_PERSISTENCE_URL,
                        IMAGE_ANALYSIS_INTERVAL, IMAGE_ANALYSIS_TESSERACT_ENABLED,

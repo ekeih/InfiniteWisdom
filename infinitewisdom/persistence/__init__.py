@@ -145,6 +145,13 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    def find_not_uploaded(self) -> Entity or None:
+        """
+        Finds an image that has not yet been uploaded to telegram servers
+        :return: entity or None
+        """
+        raise NotImplementedError()
+
     def count(self) -> int:
         """
         Returns the total number of entities stored in this persistence

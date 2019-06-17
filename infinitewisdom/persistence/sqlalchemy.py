@@ -130,6 +130,12 @@ class SQLAlchemyPersistence(ImageDataPersistence):
             return session.query(Image).filter(Image.image_data.is_(None)).order_by(
                 Image.created).all()
 
+    def find_not_uploaded(self) -> Entity or None:
+        with self._session_scope() as session:
+            return session.query(Image).filter(
+                and_(Image.telegram_file_id.is_(None), Image.image_data.isnot(None))).order_by(
+                Image.created).first()
+
     def count(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).count()
