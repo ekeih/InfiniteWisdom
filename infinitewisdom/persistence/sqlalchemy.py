@@ -189,7 +189,7 @@ class SQLAlchemyPersistence:
 
     def update(self, entity: Entity) -> None:
         with self._session_scope(write=True) as session:
-            old = session.query(Image).filter_by(url=entity.url).first()
+            old = session.query(Image).filter_by(url=entity.id).first()
             old.telegram_file_id = entity.telegram_file_id
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality
