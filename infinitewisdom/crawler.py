@@ -57,11 +57,8 @@ class Crawler(RegularIntervalWorker):
         existing = self._persistence.find_by_image_hash(image_hash)
         if existing is not None:
             self._persistence.update(existing, image_data)
-            LOGGER.debug(
-                "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
             return None
 
-        image_data = download_image_bytes(url)
         entity = Entity(url=url,
                         text=None,
                         analyser=None,

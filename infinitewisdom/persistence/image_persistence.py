@@ -40,7 +40,7 @@ class ImageDataStore:
         :return: image bytes or None if no data exist
         """
         with lock:
-            self._get(image_hash)
+            return self._get(image_hash)
 
     def _get(self, image_hash: str) -> bytes or None:
         if image_hash is None:

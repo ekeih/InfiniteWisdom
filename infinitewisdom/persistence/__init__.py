@@ -44,6 +44,12 @@ class ImageDataPersistence:
 
         self._update_stats()
 
+    def get_all(self) -> [Entity]:
+        """
+        :return: a list of all entities
+        """
+        return self._database.get_all()
+
     def add(self, entity: Entity, image_data: bytes) -> None:
         """
         Persists a new entity

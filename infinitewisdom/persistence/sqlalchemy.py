@@ -120,6 +120,10 @@ class SQLAlchemyPersistence:
         finally:
             session.close()
 
+    def get_all(self) -> [Entity]:
+        with self._session_scope() as session:
+            return session.query(Image).all()
+
     def add(self, entity: Entity):
         image = Image(url=entity.url,
                       text=entity.text,
