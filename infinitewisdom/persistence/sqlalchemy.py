@@ -62,7 +62,7 @@ class Entity:
 
     @analyser_quality.setter
     def analyser_quality(self, value):
-        self._telegram_file_id = value
+        self._analyser_quality = value
 
     @property
     def image_hash(self):
@@ -122,7 +122,7 @@ class SQLAlchemyPersistence:
 
     def get_all(self) -> [Entity]:
         with self._session_scope() as session:
-            return session.query(Image).all()
+            return session.query(Image).order_by(Image.id).all()
 
     def add(self, entity: Entity):
         image = Image(url=entity.url,
@@ -181,7 +181,8 @@ class SQLAlchemyPersistence:
     def find_not_uploaded(self) -> Entity or None:
         with self._session_scope() as session:
             return session.query(Image).filter(
-                and_(Image.telegram_file_id.is_(None), Image.image_hash.isnot(None))).order_by(Image.created).first()
+                and_(Image.telegram_file_id.is_(None),
+                     Image.image_hash.isnot(None))).order_by(Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:
@@ -189,7 +190,7 @@ class SQLAlchemyPersistence:
 
     def update(self, entity: Entity) -> None:
         with self._session_scope(write=True) as session:
-            old = session.query(Image).filter_by(url=entity.id).first()
+            old = session.query(Image).with_for_update().filter_by(id=entity.id).first()
             old.telegram_file_id = entity.telegram_file_id
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality

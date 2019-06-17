@@ -1,5 +1,7 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 
+from tqdm import tqdm
+
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import download_image_bytes, create_hash
@@ -14,6 +16,10 @@ deleted = 0
 errored = 0
 current = 0
 
+entities = p.get_all()
+total = len(entities)
+progress = tqdm(total=total, unit_scale=True, mininterval=1)
+
 
 def migrate_entity(executor, entity):
     global added
@@ -23,12 +29,14 @@ def migrate_entity(executor, entity):
     global current
 
     try:
+        progress.set_postfix_str(entity.url)
+        progress.update(n=1)
+
         if entity.image_hash is not None:
             existing_image_data = p._image_data_store.get(entity.image_hash)
             if existing_image_data is not None:
                 existing_hash = create_hash(existing_image_data)
                 if existing_hash == entity.image_hash:
-                    print("s Skipped: '{}'".format(entity.url))
                     skipped += 1
                     return
 
@@ -50,13 +58,11 @@ def migrate_entity(executor, entity):
         executor.submit(migrate_entity, executor, entity)
     finally:
         current = added + deleted + skipped + errored
-        print("Progress: {}/{}".format(current, total))
 
 
 with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
-    entities = p.get_all()
-    total = len(entities)
-    for e in entities:
+    for e in entities[71682:]:
         future = executor.submit(migrate_entity, executor, e)
+        # migrate_entity(None, e)
 
 print("Added {}\nDeleted {}\nSkipped {}\nTotal {} ".format(added, deleted, skipped, total))
