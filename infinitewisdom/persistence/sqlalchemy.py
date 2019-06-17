@@ -139,9 +139,9 @@ class SQLAlchemyPersistence:
             else:
                 return query.all()
 
-    def find_by_id(self, entity_id: int) -> [Entity]:
+    def find_by_image_hash(self, image_hash: str) -> Entity or None:
         with self._session_scope() as session:
-            return session.query(Image).filter_by(id=entity_id).first()
+            return session.query(Image).filter_by(image_hash=image_hash).first()
 
     def find_by_url(self, url: str) -> [Entity]:
         with self._session_scope() as session:

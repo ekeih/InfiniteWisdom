@@ -22,7 +22,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
-from infinitewisdom.util import download_image_bytes
+from infinitewisdom.util import download_image_bytes, create_hash
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -51,26 +51,15 @@ class Crawler(RegularIntervalWorker):
         :return: the added url
         """
         url = self._fetch_generated_image_url()
+        image_data = download_image_bytes(url)
+        image_hash = create_hash(image_data)
 
-        existing = self._persistence.find_by_url(url)
-        if len(existing) > 0:
-            for entity in existing:
-                if entity.image_hash is None:
-                    try:
-                        image_data = download_image_bytes(url)
-                        self._persistence.update(entity, image_data)
-                        LOGGER.debug(
-                            "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
-                        return None
-                    except:
-                        self._persistence.delete(entity.url)
-                        LOGGER.debug(
-                            "Entity with url '{}' already in persistence but downloading image data failed so the entity is deleted.".format(
-                                url))
-                        return None
-                else:
-                    LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
-                    return None
+        existing = self._persistence.find_by_image_hash(image_hash)
+        if existing is not None:
+            self._persistence.update(existing, image_data)
+            LOGGER.debug(
+                "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
+            return None
 
         image_data = download_image_bytes(url)
         entity = Entity(url=url,

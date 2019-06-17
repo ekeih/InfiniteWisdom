@@ -29,7 +29,7 @@ from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 from infinitewisdom.uploader import TelegramUploader
-from infinitewisdom.util import download_image_bytes, create_hash, _send_photo, _send_message
+from infinitewisdom.util import _send_photo, _send_message
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -110,12 +110,7 @@ class InfiniteWisdomBot:
             _send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
             return
 
-        if entity.image_hash is not None:
-            image_bytes = self._persistence._image_data_store.get(entity.image_hash)
-        else:
-            image_bytes = download_image_bytes(entity.url)
-            entity.image_hash = create_hash(image_bytes)
-
+        image_bytes = self._persistence._image_data_store.get(entity.image_hash)
         file_id = _send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
         entity.telegram_file_id = file_id
         self._persistence.update(entity, image_bytes)

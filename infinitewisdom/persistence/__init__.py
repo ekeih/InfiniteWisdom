@@ -44,26 +44,28 @@ class ImageDataPersistence:
 
         self._update_stats()
 
-    def add(self, entity: Entity, image_data: bytes or None) -> None:
+    def add(self, entity: Entity, image_data: bytes) -> None:
         """
         Persists a new entity
         :param entity: the entity to add
         :param image_data: image data
         """
         try:
-            if len(self.find_by_url(entity.url)) > 0:
-                LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(entity.url))
-                return
-
             entity = self._database.add(entity)
-
-            if image_data is not None:
-                image_hash = create_hash(image_data)
-                entity.image_hash = image_data
-                self._database.update(entity)
-                self._image_data_store.put(image_hash, image_data)
+            image_hash = create_hash(image_data)
+            entity.image_hash = image_hash
+            self._database.update(entity)
+            self._image_data_store.put(image_hash, image_data)
         finally:
             self._update_stats()
+
+    def get_image_data(self, entity: Entity) -> bytes or None:
+        """
+        Get the image data for an entity
+        :param entity: the entity to get the image for
+        :return: image data or None
+        """
+        return self._image_data_store.get(entity.image_hash)
 
     def get_random(self, page_size: int = None) -> Entity or [Entity]:
         """
@@ -81,6 +83,14 @@ class ImageDataPersistence:
         :return: list of entities
         """
         return self._database.find_by_url(url)
+
+    def find_by_image_hash(self, image_hash: str) -> Entity or None:
+        """
+        Finds an entity with exactly the given image_hash
+        :param image_hash: the image hash to search for
+        :return: entity or None
+        """
+        return self._database.find_by_image_hash(image_hash)
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         """
@@ -133,7 +143,7 @@ class ImageDataPersistence:
         :param image_data: the image data of the entity
         """
         try:
-            existing_entity = self._database.find_by_id(entity.id)
+            existing_entity = self._database.find_by_image_hash(entity.image_hash)
 
             new_hash = None
             if image_data is not None:
