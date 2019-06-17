@@ -72,4 +72,4 @@ class ImageDataStore:
         :param image_hash: image hash
         :return: file path
         """
-        return os.path.abspath(os.path.join(self._base_path, image_hash, "{}.jpg".format(entity_id)))
+        return os.path.abspath(os.path.join(self._base_path, image_hash[:2], "{}.jpg".format(entity_id)))
