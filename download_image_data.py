@@ -8,13 +8,15 @@ p1 = SQLAlchemyPersistence(url="sqlite:///infinitewisdom.db")
 added = 0
 skipped = 0
 deleted = 0
+errored = 0
 current = 0
 
 
-def migrate_entity(entity):
+def migrate_entity(executor, entity):
     global added
     global skipped
     global deleted
+    global errored
     global current
 
     try:
@@ -38,15 +40,19 @@ def migrate_entity(entity):
         else:
             print("O Skipped '{}'".format(entity.url))
             skipped += 1
+    except Exception as e:
+        errored += 1
+        print(e)
+        executor.submit(migrate_entity, executor, entity)
     finally:
-        current = added + skipped
+        current = added + deleted + skipped + errored
         print("Progress: {}/{}".format(current, total))
 
 
-with ThreadPoolExecutor(max_workers=4, thread_name_prefix="db-migration") as executor:
+with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
     entities = p1.find_without_image_data()
     total = len(entities)
     for e in entities:
-        future = executor.submit(migrate_entity, e)
+        future = executor.submit(migrate_entity, executor, e)
 
 print("Added {}/{} entries ({} skipped)".format(added, total, skipped))
