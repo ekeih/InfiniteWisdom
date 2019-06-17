@@ -12,7 +12,6 @@ InfiniteWisdom:
   crawler:
     interval: 0
   persistence:
-    type: "sql"
     url: "sqlite:///infinitewisdom.db"
     #path: "./infinitewisdom.pickle"
   image_analysis:

@@ -16,7 +16,7 @@
 import logging
 
 from infinitewisdom.config import Config
-from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, PERSISTENCE_TYPE_SQL
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
 from infinitewisdom.persistence.image_persistence import ImageDataStore
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Entity
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
@@ -35,11 +35,7 @@ class ImageDataPersistence:
     def __init__(self, config: Config):
         self._config = config
 
-        if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
-            self._database = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
-        else:
-            raise AssertionError("No persistence was instantiated but is required for execution")
-
+        self._database = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
         self._image_data_store = ImageDataStore(config.FILE_PERSISTENCE_BASE_PATH.value)
 
         self._update_stats()

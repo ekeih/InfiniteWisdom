@@ -23,7 +23,6 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_UPLOADER_INTERVAL                      | Interval in seconds for image uploader messages | `float` | `1` |
 | INFINITEWISDOM_UPLOADER_CHAT_ID                       | Chat id to send messages to | `str` | `None` |
 | INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
-| INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
 | INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
 | INFINITEWISDOM_PERSISTENCE_FILE_BASE_PATH             | Base path for the image data storage | `str` | `./.image_data` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_INTERVAL                | Interval in seconds for image analysis | `float` | `1` |
@@ -91,7 +90,6 @@ and other meta data related to images.
 InfiniteWisdom:
   [...]
   persistence:
-    type: "sql"
     url: "sqlite:///infinitewisdom.db"
     file_base_path: "./.image_data"
 ```
