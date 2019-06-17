@@ -140,7 +140,9 @@ class ImageDataPersistence:
                 new_hash = create_hash(image_data)
 
             if new_hash is not None and existing_entity.image_hash != new_hash:
-                self._image_data_store.put(entity.image_hash, None)
+                LOGGER.debug(
+                    "Hash changed from {} to {} for entity with url: {}".format(existing_entity.image_hash, new_hash,
+                                                                                entity.url))
                 entity.image_hash = new_hash
                 self._image_data_store.put(entity.image_hash, image_data)
             self._database.update(entity)

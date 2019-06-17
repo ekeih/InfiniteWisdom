@@ -22,7 +22,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
-from infinitewisdom.util import download_image_bytes, create_hash
+from infinitewisdom.util import download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -58,19 +58,16 @@ class Crawler(RegularIntervalWorker):
                 if entity.image_hash is None:
                     try:
                         image_data = download_image_bytes(url)
-                        image_hash = create_hash(image_data)
+                        self._persistence.update(entity, image_data)
+                        LOGGER.debug(
+                            "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
+                        return None
                     except:
+                        self._persistence.delete(entity.url)
                         LOGGER.debug(
                             "Entity with url '{}' already in persistence but downloading image data failed so the entity is deleted.".format(
                                 url))
-                        self._persistence.delete(entity.url)
-                        continue
-
-                    entity.image_hash = image_hash
-                    self._persistence.update(entity, image_data)
-                    LOGGER.debug(
-                        "Entity with url '{}' already in persistence but image data was downloaded.".format(url))
-                    return None
+                        return None
                 else:
                     LOGGER.debug("Entity with url '{}' already in persistence, skipping.".format(url))
                     return None
