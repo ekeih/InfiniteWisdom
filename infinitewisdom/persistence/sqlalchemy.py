@@ -34,15 +34,14 @@ class Entity:
     Persistence entity
     """
 
-    def __init__(self, url: str, text: str or None, analyser: str or None, analyser_quality: float or None,
-                 created: float, image_hash: str or None, telegram_file_id: str or None):
+    def __init__(self, url: str, created: float):
         self.url = url
-        self.text = text
-        self.analyser = analyser
-        self._analyser_quality = analyser_quality
+        self.text = None
+        self.analyser = None
+        self._analyser_quality = None
         self.created = created
-        self._telegram_file_id = telegram_file_id
-        self._image_hash = image_hash
+        self._telegram_file_id = None
+        self._image_hash = None
 
     @property
     def id(self):
