@@ -10,12 +10,12 @@ InfiniteWisdom:
     chat_id: "12345678"
     interval: 1
   crawler:
-    interval: 0
+    interval: 1
   persistence:
     url: "sqlite:///infinitewisdom.db"
     file_base_path: "./.image_data"
   image_analysis:
-    interval: 0
+    interval: 1
     tesseract:
       enabled: True
     google_vision:
