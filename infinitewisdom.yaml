@@ -13,7 +13,7 @@ InfiniteWisdom:
     interval: 0
   persistence:
     url: "sqlite:///infinitewisdom.db"
-    #path: "./infinitewisdom.pickle"
+    file_base_path: "./.image_data"
   image_analysis:
     interval: 0
     tesseract:
