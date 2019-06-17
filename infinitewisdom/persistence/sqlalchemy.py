@@ -125,6 +125,11 @@ class SQLAlchemyPersistence(ImageDataPersistence):
                 Image.analyser_quality,
                 Image.created).first()
 
+    def find_without_image_data(self) -> Entity or None:
+        with self._session_scope() as session:
+            return session.query(Image).filter(Image.image_data.is_(None)).order_by(
+                Image.created).all()
+
     def count(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).count()

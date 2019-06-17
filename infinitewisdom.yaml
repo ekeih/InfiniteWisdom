@@ -7,13 +7,13 @@ InfiniteWisdom:
     inline_badge_size: 16
     caption_images_with_text: True
   crawler:
-    interval: 1
+    interval: 0
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
     #path: "./infinitewisdom.pickle"
   image_analysis:
-    interval: 1
+    interval: 0
     tesseract:
       enabled: True
     google_vision:

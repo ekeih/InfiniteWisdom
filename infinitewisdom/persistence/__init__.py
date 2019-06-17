@@ -138,6 +138,13 @@ class ImageDataPersistence:
         """
         raise NotImplementedError()
 
+    def find_without_image_data(self) -> [Entity]:
+        """
+        Finds entities without image data
+        :return: list of entities without image data
+        """
+        raise NotImplementedError()
+
     def count(self) -> int:
         """
         Returns the total number of entities stored in this persistence
