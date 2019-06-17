@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
-import threading
 import time
 
 import requests
 
+from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
@@ -28,7 +28,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 
-class Crawler:
+class Crawler(RegularIntervalWorker):
     """
     Crawler used to fetch new images from the image API
     """
@@ -38,43 +38,12 @@ class Crawler:
         Creates a crawler instance.
         :param persistence: crawled data is added here
         """
-        self._config = config
+        super().__init__(config.CRAWLER_INTERVAL.value)
         self._persistence = persistence
         self._image_analysers = image_analysers
 
-        self._timer = None
-
-    def start(self):
-        """
-        Starts crawling
-        """
-        self._schedule_next_run()
-
-    def stop(self):
-        """
-        Stops crawling
-        """
-        if self._timer is not None:
-            self._timer.cancel()
-        self._timer = None
-
-    def _schedule_next_run(self):
-        """
-        Schedules the next run
-        """
-        self._timer = threading.Timer(self._config.CRAWLER_INTERVAL.value, self._crawl_job)
-        self._timer.start()
-
-    def _crawl_job(self):
-        """
-        The job that is executed regularly by this crawler
-        """
-        try:
-            self._add_image_url_to_pool()
-        except Exception as e:
-            LOGGER.error(e)
-        finally:
-            self._schedule_next_run()
+    def _run(self):
+        self._add_image_url_to_pool()
 
     def _add_image_url_to_pool(self) -> str or None:
         """
