@@ -2,7 +2,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
-from infinitewisdom.util import download_image_bytes, create_hash
+from infinitewisdom.util import download_image_bytes
 
 config = Config()
 
@@ -23,25 +23,19 @@ def migrate_entity(executor, entity):
     global current
 
     try:
-        if entity.image_hash is None:
-            try:
-                image_data = download_image_bytes(entity.url)
-                image_hash = create_hash(image_data)
-            except:
-                print(
-                    "d Deleted: '{}'".format(
-                        entity.url))
-                p.delete(entity.url)
-                deleted += 1
-                return
+        try:
+            image_data = download_image_bytes(entity.url)
+        except:
+            print(
+                "d Deleted: '{}'".format(
+                    entity.url))
+            p.delete(entity.url)
+            deleted += 1
+            return
 
-            entity.image_data = image_data
-            p.update(entity, image_data)
-            print("+ Downloaded: '{}'".format(entity.url))
-            added += 1
-        else:
-            print("O Skipped '{}'".format(entity.url))
-            skipped += 1
+        p.update(entity, image_data)
+        print("+ Downloaded: '{}'".format(entity.url))
+        added += 1
     except Exception as e:
         errored += 1
         print(e)

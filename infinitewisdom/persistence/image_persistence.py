@@ -13,8 +13,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import logging
 import os
 from threading import Lock
+
+from infinitewisdom.util import create_hash
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 lock = Lock()
 
@@ -34,15 +40,18 @@ class ImageDataStore:
         :return: image bytes or None if no data exist
         """
         with lock:
-            if image_hash is None:
-                return None
+            self._get(image_hash)
 
-            file_path = self._get_file_path(image_hash)
-            if os.path.exists(file_path):
-                with open(file_path, 'rb') as f:
-                    return f.read()
-            else:
-                return None
+    def _get(self, image_hash: str) -> bytes or None:
+        if image_hash is None:
+            return None
+
+        file_path = self._get_file_path(image_hash)
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                return f.read()
+        else:
+            return None
 
     def put(self, image_hash: str, image_data: bytes or None):
         """
@@ -51,6 +60,10 @@ class ImageDataStore:
         :param image_data: the image data
         """
         with lock:
+            if image_hash is None:
+                LOGGER.debug("Trying to put with a None hash is ignored")
+                return
+
             file_path = self._get_file_path(image_hash)
             folder, file = os.path.split(file_path)
 
@@ -59,11 +72,27 @@ class ImageDataStore:
                     os.remove(file_path)
                 if os.path.exists(folder) and len(os.listdir(folder)) == 0:
                     os.remove(folder)
-            else:
-                os.makedirs(folder, exist_ok=True)
 
-                with open(file_path, 'wb') as f:
-                    f.write(image_data)
+                LOGGER.debug("Image data removed: {}".format(image_hash))
+                return
+
+            image = self._get(image_hash)
+            if image is not None:
+                existing_hash = create_hash(image)
+                if existing_hash != image_hash:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    if os.path.exists(folder) and len(os.listdir(folder)) == 0:
+                        os.remove(folder)
+                else:
+                    LOGGER.debug("Image data already present: {}".format(image_hash))
+                    return
+
+            os.makedirs(folder, exist_ok=True)
+            with open(file_path, 'wb') as f:
+                f.write(image_data)
+
+            LOGGER.debug("Image data saved: {}".format(image_hash))
 
     def clear(self):
         with lock:
@@ -75,4 +104,4 @@ class ImageDataStore:
         :param image_hash: image hash
         :return: file path
         """
-        return os.path.abspath(os.path.join(self._base_path, image_hash[:2], "{}.jpg".format(image_hash)))
+        return os.path.abspath(os.path.join(self._base_path, image_hash[:3], "{}.jpg".format(image_hash)))
