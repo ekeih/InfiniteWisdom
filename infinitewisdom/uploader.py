@@ -49,7 +49,7 @@ class TelegramUploader(RegularIntervalWorker):
         if entity is None:
             return
 
-        image_data = self._persistence._image_data_store.get(entity.id, entity.image_hash)
+        image_data = self._persistence._image_data_store.get(entity.image_hash)
         if image_data is None:
             return
 

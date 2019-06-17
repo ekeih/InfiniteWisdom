@@ -76,14 +76,12 @@ class Crawler(RegularIntervalWorker):
                     return None
 
         image_data = download_image_bytes(url)
-        image_hash = create_hash(image_data)
-
         entity = Entity(url=url,
                         text=None,
                         analyser=None,
                         analyser_quality=None,
                         telegram_file_id=None,
-                        image_hash=image_hash,
+                        image_hash=None,
                         created=time.time())
         self._persistence.add(entity, image_data)
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))

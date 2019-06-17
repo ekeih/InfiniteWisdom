@@ -1,9 +1,12 @@
 from concurrent.futures.thread import ThreadPoolExecutor
 
-from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
+from infinitewisdom.config import Config
+from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import download_image_bytes, create_hash
 
-p1 = SQLAlchemyPersistence(url="sqlite:///infinitewisdom.db")
+config = Config()
+
+p = ImageDataPersistence(config)
 
 added = 0
 skipped = 0
@@ -20,7 +23,7 @@ def migrate_entity(executor, entity):
     global current
 
     try:
-        if entity.image_data is None:
+        if entity.image_hash is None:
             try:
                 image_data = download_image_bytes(entity.url)
                 image_hash = create_hash(image_data)
@@ -28,13 +31,12 @@ def migrate_entity(executor, entity):
                 print(
                     "d Deleted: '{}'".format(
                         entity.url))
-                p1.delete(entity.url)
+                p.delete(entity.url)
                 deleted += 1
                 return
 
             entity.image_data = image_data
-            entity.image_hash = image_hash
-            p1.update(entity)
+            p.update(entity, image_data)
             print("+ Downloaded: '{}'".format(entity.url))
             added += 1
         else:
@@ -50,7 +52,7 @@ def migrate_entity(executor, entity):
 
 
 with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
-    entities = p1.find_without_image_data()
+    entities = p.find_without_image_data()
     total = len(entities)
     for e in entities:
         future = executor.submit(migrate_entity, executor, e)

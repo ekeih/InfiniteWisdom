@@ -19,7 +19,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
-from infinitewisdom.util import select_best_available_analyser, download_image_bytes, create_hash
+from infinitewisdom.util import select_best_available_analyser, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -75,11 +75,12 @@ class AnalysisWorker(RegularIntervalWorker):
                     entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
             return
 
-        if entity.image_hash is None:
+        image_data = None
+        if entity.image_hash is not None:
+            image_data = self._persistence._image_data_store.get(entity.image_hash)
+
+        if image_data is None:
             image_data = download_image_bytes(entity.url)
-            entity.image_hash = create_hash(image_data)
-        else:
-            image_data = self._persistence._image_data_store.get(entity.id, entity.image_hash)
 
         old_analyser = entity.analyser
         old_quality = entity.analyser_quality

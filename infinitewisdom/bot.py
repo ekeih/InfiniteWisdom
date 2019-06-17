@@ -111,7 +111,7 @@ class InfiniteWisdomBot:
             return
 
         if entity.image_hash is not None:
-            image_bytes = self._persistence._image_data_store.get(entity.id, entity.image_hash)
+            image_bytes = self._persistence._image_data_store.get(entity.image_hash)
         else:
             image_bytes = download_image_bytes(entity.url)
             entity.image_hash = create_hash(image_bytes)

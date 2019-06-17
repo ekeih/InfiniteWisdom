@@ -59,7 +59,9 @@ class ImageDataPersistence:
 
             if image_data is not None:
                 image_hash = create_hash(image_data)
-                self._image_data_store.put(entity.id, image_hash, image_data)
+                entity.image_hash = image_data
+                self._database.update(entity)
+                self._image_data_store.put(image_hash, image_data)
         finally:
             self._update_stats()
 
@@ -136,10 +138,11 @@ class ImageDataPersistence:
             new_hash = None
             if image_data is not None:
                 new_hash = create_hash(image_data)
-                entity.image_hash = new_hash
 
             if new_hash is not None and existing_entity.image_hash != new_hash:
-                self._image_data_store.put(entity.id, entity.image_hash, image_data)
+                self._image_data_store.put(entity.image_hash, None)
+                entity.image_hash = new_hash
+                self._image_data_store.put(entity.image_hash, image_data)
             self._database.update(entity)
         finally:
             self._update_stats()
@@ -159,7 +162,7 @@ class ImageDataPersistence:
         """
         try:
             entity = self._database.find_by_url(url)
-            self._image_data_store.put(entity.id, entity.image_hash, None)
+            self._image_data_store.put(entity.image_hash, None)
 
             self._database.delete(url)
         finally:
