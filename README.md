@@ -25,6 +25,7 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
 | INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
 | INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
+| INFINITEWISDOM_PERSISTENCE_FILE_BASE_PATH             | Base path for the image data storage | `str` | `./.image_data` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_INTERVAL                | Interval in seconds for image analysis | `float` | `1` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
@@ -56,6 +57,7 @@ InfiniteWisdom:
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
+    file_base_path: "./.image_data"
   image_analysis:
     interval: 1
     tesseract:
@@ -83,20 +85,7 @@ InfiniteWisdom:
 ### Persistence
 
 The persistence is used to store image url's, image analysis data
-and other meta data related to images. 
-`InfiniteWisdom` supports multiple persistence backends.
-
-#### pickle
-
-```
-InfiniteWisdom:
-  [...]
-  persistence:
-    type: "pickle"
-    url: "/tmp/infinitewisdom.pickle"
-```
-
-#### SQLAlchemy
+and other meta data related to images.
 
 ```
 InfiniteWisdom:
@@ -104,6 +93,7 @@ InfiniteWisdom:
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
+    file_base_path: "./.image_data"
 ```
 
 ### Image analysis
