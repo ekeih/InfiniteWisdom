@@ -44,7 +44,6 @@ def migrate_entity(entity):
 
 
 with ThreadPoolExecutor(max_workers=4, thread_name_prefix="db-migration") as executor:
-    # TODO: currently this does not work because there is no interface method to query "all" items
     entities = p1.find_without_image_data()
     total = len(entities)
     for e in entities:
