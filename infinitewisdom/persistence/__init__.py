@@ -16,7 +16,8 @@
 import logging
 
 from infinitewisdom.config import Config
-from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
+    IMAGE_ANALYSIS_TYPE_AZURE
 from infinitewisdom.persistence.image_persistence import ImageDataStore
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Entity
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
@@ -230,6 +231,9 @@ class ImageDataPersistence:
 
         google_vision_entites_count = self.count_items_by_analyser(IMAGE_ANALYSIS_TYPE_GOOGLE_VISION)
         IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_GOOGLE_VISION).set(google_vision_entites_count)
+
+        microsoft_azure_entites_count = self.count_items_by_analyser(IMAGE_ANALYSIS_TYPE_AZURE)
+        IMAGE_ANALYSIS_TYPE_COUNT.labels(type=IMAGE_ANALYSIS_TYPE_AZURE).set(microsoft_azure_entites_count)
 
         entities_with_text_count = self.count_items_with_text()
         IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)

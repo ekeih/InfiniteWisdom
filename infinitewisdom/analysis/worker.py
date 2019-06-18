@@ -92,7 +92,7 @@ class AnalysisWorker(RegularIntervalWorker):
 
         self._persistence.update(entity, image_data)
         LOGGER.debug(
-            "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {})".format(
+            "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {}): {}".format(
                 entity.url, analyser.get_identifier(), old_analyser, entity.analyser_quality - old_quality,
                 old_quality,
-                entity.analyser_quality))
+                entity.analyser_quality, entity.text))
