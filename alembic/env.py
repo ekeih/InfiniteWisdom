@@ -2,10 +2,9 @@ import os
 import sys
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
-from alembic import context
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -18,7 +17,8 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+disable_existing_loggers = config.attributes.get('configure_logger', True)
+fileConfig(config.config_file_name, disable_existing_loggers=disable_existing_loggers)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

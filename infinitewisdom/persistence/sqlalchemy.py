@@ -100,18 +100,22 @@ class SQLAlchemyPersistence:
         if url is None:
             url = DEFAULT_SQL_PERSISTENCE_URL
 
+        # TODO: this currently also logs to file because of alembic
+        self._migrate_db()
+
         self._engine = create_engine(url, echo=False)
-
-        import alembic.config
-        alembicArgs = [
-            '--raiseerr',
-            'upgrade', 'head',
-        ]
-        alembic.config.main(argv=alembicArgs)
-
         self._sessionmaker = sessionmaker(bind=self._engine)
 
         LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count()))
+
+    def _migrate_db(self):
+        from alembic.config import Config
+        import alembic.command
+
+        config = Config('alembic.ini')
+        config.attributes['configure_logger'] = False
+
+        alembic.command.upgrade(config, 'head')
 
     @contextmanager
     def _session_scope(self, write: bool = False) -> Session:
