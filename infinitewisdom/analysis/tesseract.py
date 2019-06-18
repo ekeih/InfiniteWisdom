@@ -13,9 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import logging
 import math
 
 from infinitewisdom.analysis import ImageAnalyser
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.DEBUG)
 
 
 class Tesseract(ImageAnalyser):
@@ -41,12 +45,15 @@ class Tesseract(ImageAnalyser):
         import pytesseract
 
         # pytesseract.pytesseract.tesseract_cmd = r'<full_path_to_your_tesseract_executable>'
+        try:
+            image = self._preprocess(image)
 
-        image = self._preprocess(image)
-
-        # We'll use Pillow's Image class to open the image and pytesseract to detect the string in the image
-        text = pytesseract.image_to_string(image)
-        return text
+            # We'll use Pillow's Image class to open the image and pytesseract to detect the string in the image
+            text = pytesseract.image_to_string(image)
+            return text
+        except Exception as ex:
+            LOGGER.error(ex)
+            return None
 
     @staticmethod
     def _preprocess(image: bytes) -> bytes:

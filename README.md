@@ -20,10 +20,11 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
 | INFINITEWISDOM_TELEGRAM_CAPTION_IMAGES_WITH_TEXT      | Specifies whether to caption images with their text | `bool` | `False` |
 | INFINITEWISDOM_TELEGRAM_INLINE_BADGE_SIZE             | Number of items to return in a single inline request badge | `int` | `16` |
+| INFINITEWISDOM_UPLOADER_INTERVAL                      | Interval in seconds for image uploader messages | `float` | `1` |
+| INFINITEWISDOM_UPLOADER_CHAT_ID                       | Chat id to send messages to | `str` | `None` |
 | INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
-| INFINITEWISDOM_PERSISTENCE_TYPE                       | Type of persistence to use | `str` | `sql` |
-| INFINITEWISDOM_PERSISTENCE_PATH                       | pickle persistence file path | `str` | `./infinitewisdom.pickle` |
 | INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:///infinitewisdom.db` |
+| INFINITEWISDOM_PERSISTENCE_FILE_BASE_PATH             | Base path for the image data storage | `str` | `./.image_data` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_INTERVAL                | Interval in seconds for image analysis | `float` | `1` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
@@ -51,11 +52,15 @@ InfiniteWisdom:
     greeting_message: "Hi there!"
     inline_badge_size: 16
     caption_images_with_text: True
+  uploader:
+    chat_id: "12345678"
+    interval: 1
   crawler:
     interval: 1
   persistence:
     type: "sql"
     url: "sqlite:///infinitewisdom.db"
+    file_base_path: "./.image_data"
   image_analysis:
     interval: 1
     tesseract:
@@ -88,27 +93,14 @@ InfiniteWisdom:
 ### Persistence
 
 The persistence is used to store image url's, image analysis data
-and other meta data related to images. 
-`InfiniteWisdom` supports multiple persistence backends.
-
-#### pickle
+and other meta data related to images.
 
 ```
 InfiniteWisdom:
   [...]
   persistence:
-    type: "pickle"
-    url: "/tmp/infinitewisdom.pickle"
-```
-
-#### SQLAlchemy
-
-```
-InfiniteWisdom:
-  [...]
-  persistence:
-    type: "sql"
     url: "sqlite:///infinitewisdom.db"
+    file_base_path: "./.image_data"
 ```
 
 ### Image analysis
@@ -165,10 +157,6 @@ InfiniteWisdom:
       region: "francecentral"
       capacity_per_month: 5000
 ```
-
-#### Amazon Rekognition
-
-Coming...
 
 #### Combining Analysers
 

@@ -6,12 +6,14 @@ InfiniteWisdom:
     greeting_message: "Hi there! :wave:"
     inline_badge_size: 16
     caption_images_with_text: True
+  uploader:
+    # chat_id: "12345678"
+    interval: 1
   crawler:
     interval: 1
   persistence:
-    type: "sql"
     url: "sqlite:///infinitewisdom.db"
-    #path: "./infinitewisdom.pickle"
+    file_base_path: "./.image_data"
   image_analysis:
     interval: 1
     tesseract:
@@ -21,7 +23,7 @@ InfiniteWisdom:
       auth_file: "./InfiniteWisdom-1522618e7d39.json"
       capacity_per_month: 100
     microsoft_azure:
-      enabled: True
+      enabled: False
       subscription_key: "1234567890684c3baa5a0605712345ab"
       region: "francecentral"
       capacity_per_month: 5000

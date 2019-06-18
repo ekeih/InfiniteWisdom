@@ -15,9 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
-from io import BytesIO
+import os
+import sys
 
-from emoji import emojize
+parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
+sys.path.append(parent_dir)
+
 from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
@@ -28,13 +31,11 @@ from infinitewisdom.analysis.microsoftazure import AzureComputerVision
 from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.config import Config
-from infinitewisdom.const import PERSISTENCE_TYPE_PICKLE, PERSISTENCE_TYPE_SQL
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.persistence.pickle import PicklePersistence
-from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
-from infinitewisdom.util import download_image_bytes
+from infinitewisdom.uploader import TelegramUploader
+from infinitewisdom.util import _send_photo, _send_message
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -84,8 +85,8 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         """
         self._send_random_quote(bot, update)
-        self._send_message(bot=bot, chat_id=update.message.chat_id,
-                           message=self._config.TELEGRAM_GREETING_MESSAGE.value)
+        _send_message(bot=bot, chat_id=update.message.chat_id,
+                      message=self._config.TELEGRAM_GREETING_MESSAGE.value)
 
     def _command_callback(self, bot: Bot, update: Update) -> None:
         """
@@ -111,44 +112,14 @@ class InfiniteWisdomBot:
         if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
             caption = entity.text
 
-        if entity.telegram_file_id is None:
-            image_bytes = download_image_bytes(entity.url)
-            file_id = self._send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
-            entity.telegram_file_id = file_id
-            self._persistence.update(entity)
-        else:
-            self._send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
+        if entity.telegram_file_id is not None:
+            _send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
+            return
 
-    @staticmethod
-    def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,
-                    caption: str = None) -> int:
-        """
-        Sends a photo to the given chat
-        :param bot: the bot
-        :param chat_id: the chat id to send the image to
-        :param image_data: the image data
-        :return: telegram image file id
-        """
-        if image_data is not None:
-            image_bytes_io = BytesIO(image_data)
-            image_bytes_io.name = 'inspireme.jpeg'
-            photo = image_bytes_io
-        elif file_id is not None:
-            photo = file_id
-        else:
-            raise ValueError("At least one of file_id and image_data has to be provided!")
-
-        message = bot.send_photo(chat_id=chat_id, photo=photo, caption=caption)
-        return message.photo[-1].file_id
-
-    def _send_message(self, bot: Bot, chat_id: str, message: str):
-        """
-        Sends a text message to the given chat
-        :param bot: the bot
-        :param chat_id: the chat id to send the message to
-        :param message: the message to chat (may contain emoji aliases)
-        """
-        bot.send_message(chat_id=chat_id, text=emojize(message, use_aliases=True))
+        image_bytes = self._persistence._image_data_store.get(entity.image_hash)
+        file_id = _send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+        entity.telegram_file_id = file_id
+        self._persistence.update(entity, image_bytes)
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, bot: Bot, update: Update) -> None:
@@ -214,13 +185,7 @@ class InfiniteWisdomBot:
 if __name__ == '__main__':
     config = Config()
 
-    persistence = None
-    if config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_PICKLE:
-        persistence = PicklePersistence(config.PICKLE_PERSISTENCE_PATH.value)
-    elif config.PERSISTENCE_TYPE.value == PERSISTENCE_TYPE_SQL:
-        persistence = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
-    else:
-        raise AssertionError("No persistence was instantiated but is required for execution")
+    persistence = ImageDataPersistence(config)
 
     image_analysers = []
     if config.IMAGE_ANALYSIS_TESSERACT_ENABLED.value:
@@ -241,7 +206,10 @@ if __name__ == '__main__':
     wisdom_bot = InfiniteWisdomBot(config, persistence, image_analysers)
     crawler = Crawler(config, persistence, image_analysers)
     analysis_worker = AnalysisWorker(config, persistence, image_analysers)
+    telegram_uploader = TelegramUploader(config, persistence, wisdom_bot._updater.bot)
 
     wisdom_bot.start()
     crawler.start()
     analysis_worker.start()
+
+    telegram_uploader.start()

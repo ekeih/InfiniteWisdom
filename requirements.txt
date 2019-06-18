@@ -6,4 +6,5 @@ google-cloud-vision
 pytesseract
 opencv-python
 sqlalchemy
+alembic
 emoji

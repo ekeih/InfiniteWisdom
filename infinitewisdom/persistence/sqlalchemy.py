@@ -22,7 +22,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
-from infinitewisdom.persistence import ImageDataPersistence, Entity
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -30,7 +29,55 @@ LOGGER.setLevel(logging.DEBUG)
 Base = declarative_base()
 
 
+class Entity:
+    """
+    Persistence entity
+    """
+
+    def __init__(self, url: str, created: float, text: str or None = None, analyser: str or None = None,
+                 analyser_quality: float or None = None, image_hash: str or None = None,
+                 telegram_file_id: str or None = None):
+        self.url = url
+        self.text = text
+        self.analyser = analyser
+        self._analyser_quality = analyser_quality
+        self.created = created
+        self._telegram_file_id = telegram_file_id
+        self._image_hash = image_hash
+
+    @property
+    def id(self):
+        return self.__dict__.get('id', None)
+
+    @property
+    def telegram_file_id(self):
+        return self.__dict__.get('telegram_file_id', None)
+
+    @telegram_file_id.setter
+    def telegram_file_id(self, value):
+        self._telegram_file_id = value
+
+    @property
+    def analyser_quality(self):
+        return self.__dict__.get('analyser_quality', None)
+
+    @analyser_quality.setter
+    def analyser_quality(self, value):
+        self._analyser_quality = value
+
+    @property
+    def image_hash(self):
+        return self.__dict__.get('image_hash', None)
+
+    @image_hash.setter
+    def image_hash(self, value):
+        self._image_hash = value
+
+
 class Image(Base, Entity):
+    """
+    Data model of a single quote
+    """
     __tablename__ = 'images'
 
     id = Column(Integer, primary_key=True)
@@ -41,9 +88,10 @@ class Image(Base, Entity):
     analyser_quality = Column(Float)
     created = Column(Float)
     telegram_file_id = Column(String)
+    image_hash = Column(String)
 
 
-class SQLAlchemyPersistence(ImageDataPersistence):
+class SQLAlchemyPersistence:
     """
     Implementation using SQLAlchemy
     """
@@ -52,13 +100,22 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         if url is None:
             url = DEFAULT_SQL_PERSISTENCE_URL
 
-        self._engine = create_engine(url, echo=False)
-        Base.metadata.create_all(self._engine)
+        # TODO: this currently also logs to file because of alembic
+        self._migrate_db()
 
+        self._engine = create_engine(url, echo=False)
         self._sessionmaker = sessionmaker(bind=self._engine)
 
-        self._update_stats()
         LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count()))
+
+    def _migrate_db(self):
+        from alembic.config import Config
+        import alembic.command
+
+        config = Config('alembic.ini')
+        config.attributes['configure_logger'] = False
+
+        alembic.command.upgrade(config, 'head')
 
     @contextmanager
     def _session_scope(self, write: bool = False) -> Session:
@@ -74,15 +131,23 @@ class SQLAlchemyPersistence(ImageDataPersistence):
         finally:
             session.close()
 
-    def _add(self, entity: Entity) -> bool:
+    def get_all(self) -> [Entity]:
+        with self._session_scope() as session:
+            return session.query(Image).order_by(Image.id).all()
+
+    def add(self, entity: Entity):
         image = Image(url=entity.url,
                       text=entity.text,
                       analyser=entity.analyser, analyser_quality=entity.analyser_quality,
                       telegram_file_id=entity.telegram_file_id,
+                      image_hash=entity.image_hash,
                       created=entity.created)
 
-        with self._session_scope(write=True) as session:
+        with self._session_scope() as session:
             session.add(image)
+            session.commit()
+            session.refresh(image)
+            return image
 
     def get_random(self, page_size: int = None) -> Entity or [Entity]:
         with self._session_scope() as session:
@@ -91,6 +156,10 @@ class SQLAlchemyPersistence(ImageDataPersistence):
                 return query.first()
             else:
                 return query.all()
+
+    def find_by_image_hash(self, image_hash: str) -> Entity or None:
+        with self._session_scope() as session:
+            return session.query(Image).filter_by(image_hash=image_hash).first()
 
     def find_by_url(self, url: str) -> [Entity]:
         with self._session_scope() as session:
@@ -108,39 +177,53 @@ class SQLAlchemyPersistence(ImageDataPersistence):
 
     def find_non_optimal(self, target_quality: int) -> Entity or None:
         with self._session_scope() as session:
-            entity = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(Image.created).first()
+            entity = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(
+                Image.created).first()
             if entity is not None:
                 return entity
 
             return session.query(Image).filter(Image.analyser_quality.isnot(None),
-                                               Image.analyser_quality < target_quality).order_by(Image.analyser_quality,
-                                                                                                 Image.created).first()
+                                               Image.analyser_quality < target_quality).order_by(
+                Image.analyser_quality,
+                Image.created).first()
+
+    def find_without_image_data(self) -> Entity or None:
+        with self._session_scope() as session:
+            return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
+                Image.created).all()
+
+    def find_not_uploaded(self) -> Entity or None:
+        with self._session_scope() as session:
+            return session.query(Image).filter(
+                and_(Image.telegram_file_id.is_(None),
+                     Image.image_hash.isnot(None))).order_by(Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).count()
 
-    def _update(self, entity: Entity) -> None:
+    def update(self, entity: Entity) -> None:
         with self._session_scope(write=True) as session:
-            old = session.query(Image).filter_by(url=entity.url).first()
+            old = session.query(Image).with_for_update().filter_by(id=entity.id).first()
             old.telegram_file_id = entity.telegram_file_id
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality
             old.text = entity.text
+            old.image_hash = entity.image_hash
 
     def count_items_this_month(self, analyser: str) -> int:
         with self._session_scope() as session:
             return session.query(Image).filter(Image.analyser == analyser).filter(
                 Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
-    def _delete(self, url: str) -> None:
+    def delete(self, url: str) -> None:
         with self._session_scope(write=True) as session:
             entity = session.query(Image).filter_by(url=url).first()
             if entity is not None:
                 return session.delete(entity)
 
-    def _clear(self) -> None:
-        pass
+    def clear(self) -> None:
+        raise NotImplementedError()
 
     def count_items_with_telegram_upload(self) -> int:
         with self._session_scope() as session:
@@ -153,3 +236,7 @@ class SQLAlchemyPersistence(ImageDataPersistence):
     def count_items_with_text(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).filter(func.length(Image.text) > 0).count()
+
+    def count_items_with_image_data(self) -> int:
+        with self._session_scope() as session:
+            return session.query(Image).filter(Image.image_hash.isnot(None)).count()

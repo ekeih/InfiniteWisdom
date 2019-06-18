@@ -18,8 +18,8 @@
 Holds important constants
 """
 
-DEFAULT_PICKLE_PERSISTENCE_PATH = "./infinitewisdom.pickle"
 DEFAULT_SQL_PERSISTENCE_URL = "sqlite:///infinitewisdom.db"
+DEFAULT_FILE_PERSISTENCE_BASE_PATH = "./.image_data"
 
 CONFIG_FILE_NAME = "infinitewisdom"
 
@@ -40,12 +40,10 @@ IMAGE_ANALYSIS_TYPE_TESSERACT = "tesseract"
 IMAGE_ANALYSIS_TYPE_GOOGLE_VISION = "google-vision"
 IMAGE_ANALYSIS_TYPE_AZURE = "microsoft-azure"
 
-PERSISTENCE_TYPE_PICKLE = "pickle"
-PERSISTENCE_TYPE_SQL = "sql"
-
 CONFIG_NODE_ROOT = "InfiniteWisdom"
 CONFIG_NODE_TELEGRAM = "telegram"
 CONFIG_NODE_CRAWLER = "crawler"
+CONFIG_NODE_UPLOADER = "uploader"
 CONFIG_NODE_PERSISTENCE = "persistence"
 CONFIG_NODE_IMAGE_ANALYSIS = "image_analysis"
 CONFIG_NODE_INTERVAL = "interval"
