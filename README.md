@@ -31,7 +31,7 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED | Enable/Disable the Google Vision image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY | Microsoft Azure Computer Vision subscription key | `str` | `-` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION  | Server region to use. This has to match the region of your subscription key and is the subdomain of the url (f.ex. `francecentral` in `https://francecentral.api.cognitive.microsoft.com/` | `str` | `-` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `int` | `5000` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Microsoft Azure in a month | `int` | `5000` |
 
 ### yaml file
 
