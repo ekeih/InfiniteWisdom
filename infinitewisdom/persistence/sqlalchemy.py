@@ -101,7 +101,13 @@ class SQLAlchemyPersistence:
             url = DEFAULT_SQL_PERSISTENCE_URL
 
         self._engine = create_engine(url, echo=False)
-        Base.metadata.create_all(self._engine)
+
+        import alembic.config
+        alembicArgs = [
+            '--raiseerr',
+            'upgrade', 'head',
+        ]
+        alembic.config.main(argv=alembicArgs)
 
         self._sessionmaker = sessionmaker(bind=self._engine)
 
