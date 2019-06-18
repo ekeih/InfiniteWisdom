@@ -15,6 +15,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+import os
+import sys
+
+parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
+sys.path.append(parent_dir)
 
 from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
