@@ -38,6 +38,7 @@ ALLOWED_CONFIG_FILE_PATHS = [
 
 IMAGE_ANALYSIS_TYPE_TESSERACT = "tesseract"
 IMAGE_ANALYSIS_TYPE_GOOGLE_VISION = "google-vision"
+IMAGE_ANALYSIS_TYPE_AZURE = "microsoft-azure"
 
 CONFIG_NODE_ROOT = "InfiniteWisdom"
 CONFIG_NODE_TELEGRAM = "telegram"
@@ -49,6 +50,7 @@ CONFIG_NODE_INTERVAL = "interval"
 
 CONFIG_NODE_TESSERACT = "tesseract"
 CONFIG_NODE_GOOGLE_VISION = "google_vision"
+CONFIG_NODE_MICROSOFT_AZURE = "microsoft_azure"
 
 CONFIG_NODE_ENABLED = "enabled"
 CONFIG_NODE_CAPACITY_PER_MONTH = "capacity_per_month"

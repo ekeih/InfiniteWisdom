@@ -23,13 +23,17 @@ will always override the value provided in the yaml file.
 | INFINITEWISDOM_UPLOADER_INTERVAL                      | Interval in seconds for image uploader messages | `float` | `1` |
 | INFINITEWISDOM_UPLOADER_CHAT_ID                       | Chat id to send messages to | `str` | `None` |
 | INFINITEWISDOM_CRAWLER_INTERVAL                       | Interval in seconds for image api requests | `float` | `1` |
-| INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:////tmp/infinitewisdom.db` |
+| INFINITEWISDOM_PERSISTENCE_URL                        | SQLAlchemy connection URL | `str` | `sqlite:///infinitewisdom.db` |
 | INFINITEWISDOM_PERSISTENCE_FILE_BASE_PATH             | Base path for the image data storage | `str` | `./.image_data` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_INTERVAL                | Interval in seconds for image analysis | `float` | `1` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_TESSERACT_ENABLED       | Enable/Disable the Tesseract image analyser | `bool` | `False` |
 | INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED   | Enable/Disable the Google Vision image analyser | `bool` | `False` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE | Path of Google Vision auth file | `str` | `None` |
-| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `str` | `1000` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE | Path of Google Vision auth file | `str` | `-` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Google Vision in a month | `int` | `1000` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED | Enable/Disable the Google Vision image analyser | `bool` | `False` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY | Microsoft Azure Computer Vision subscription key | `str` | `-` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION  | Server region to use. This has to match the region of your subscription key and is the subdomain of the url (f.ex. `francecentral` in `https://francecentral.api.cognitive.microsoft.com/` | `str` | `-` |
+| INFINITEWISDOM_IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY_PER_MONTH | Maximum amount of images to analyse using Microsoft Azure in a month | `int` | `5000` |
 
 ### yaml file
 
@@ -65,6 +69,11 @@ InfiniteWisdom:
       enabled: False
       auth_file: "./my-auth-file.json"
       capacity_per_month: 1000
+    microsoft_azure:
+      enabled: False
+      subscription_key: "1234567890684c3baa5a0605712345ab"
+      region: "francecentral"
+      capacity_per_month: 5000
 ```
 
 ### Crawler
@@ -138,11 +147,16 @@ InfiniteWisdom:
 
 #### Microsoft Computer Vision
 
-Coming...
-
-#### Amazon Rekognition
-
-Coming...
+```
+InfiniteWisdom:
+  [...]
+  image_analysis:
+    microsoft_azure:
+      enabled: False
+      subscription_key: "1234567890684c3baa5a0605712345ab"
+      region: "francecentral"
+      capacity_per_month: 5000
+```
 
 #### Combining Analysers
 
