@@ -34,14 +34,16 @@ class Entity:
     Persistence entity
     """
 
-    def __init__(self, url: str, created: float):
+    def __init__(self, url: str, created: float, text: str or None = None, analyser: str or None = None,
+                 analyser_quality: float or None = None, image_hash: str or None = None,
+                 telegram_file_id: str or None = None):
         self.url = url
-        self.text = None
-        self.analyser = None
-        self._analyser_quality = None
+        self.text = text
+        self.analyser = analyser
+        self._analyser_quality = analyser_quality
         self.created = created
-        self._telegram_file_id = None
-        self._image_hash = None
+        self._telegram_file_id = telegram_file_id
+        self._image_hash = image_hash
 
     @property
     def id(self):
@@ -131,8 +133,11 @@ class SQLAlchemyPersistence:
                       image_hash=entity.image_hash,
                       created=entity.created)
 
-        with self._session_scope(write=True) as session:
-            return session.add(image)
+        with self._session_scope() as session:
+            session.add(image)
+            session.commit()
+            session.refresh(image)
+            return image
 
     def get_random(self, page_size: int = None) -> Entity or [Entity]:
         with self._session_scope() as session:
