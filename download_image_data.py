@@ -1,5 +1,3 @@
-from concurrent.futures.thread import ThreadPoolExecutor
-
 from tqdm import tqdm
 
 from infinitewisdom.config import Config
@@ -59,8 +57,12 @@ def migrate_entity(entity):
         current = added + deleted + skipped + errored
 
 
-with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
-    for e in entities:
-        future = executor.submit(migrate_entity, e)
+# with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
+#    for e in entities:
+#        future = executor.submit(migrate_entity, e)
+
+
+for e in entities:
+    migrate_entity(e)
 
 print("Added {}\nDeleted {}\nSkipped {}\nTotal {} ".format(added, deleted, skipped, total))
