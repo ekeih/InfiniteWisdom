@@ -7,7 +7,7 @@ InfiniteWisdom:
     inline_badge_size: 16
     caption_images_with_text: True
   uploader:
-    chat_id: "12345678"
+    # chat_id: "12345678"
     interval: 1
   crawler:
     interval: 1
