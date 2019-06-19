@@ -56,6 +56,11 @@ class Crawler(RegularIntervalWorker):
 
         existing = self._persistence.find_by_image_hash(image_hash)
         if existing is not None:
+            if existing.url != url:
+                LOGGER.warning(
+                    'Found already known image hash for a different url than expected. Old: {} New: {} Hash: {}'.format(
+                        existing.url, url, image_hash))
+                existing.url = url
             self._persistence.update(existing, image_data)
             return None
 
