@@ -58,7 +58,6 @@ InfiniteWisdom:
   crawler:
     interval: 1
   persistence:
-    type: "sql"
     url: "sqlite:///infinitewisdom.db"
     file_base_path: "./.image_data"
   image_analysis:
