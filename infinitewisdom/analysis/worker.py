@@ -46,7 +46,8 @@ class AnalysisWorker(RegularIntervalWorker):
             LOGGER.warning("No image analyser provided")
             self._target_quality = 0
         else:
-            self._target_quality = sorted(self._image_analysers, key=lambda x: x.get_quality())[0].get_quality()
+            self._target_quality = sorted(self._image_analysers, key=lambda x: x.get_quality(), reverse=True)[
+                0].get_quality()
 
     def start(self):
         if len(self._image_analysers) <= 0:
