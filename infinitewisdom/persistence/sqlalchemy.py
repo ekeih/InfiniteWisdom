@@ -176,17 +176,30 @@ class SQLAlchemyPersistence:
             filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
             return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
 
-    def find_non_optimal(self, target_quality: int) -> Entity or None:
-        with self._session_scope() as session:
-            entity = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(
-                Image.created).first()
-            if entity is not None:
-                return entity
+    def find_all_non_optimal(self, target_quality: int, limit: int = None) -> [Entity]:
+        if limit is None:
+            limit = 1000
 
-            return session.query(Image).filter(Image.analyser_quality.isnot(None),
-                                               Image.analyser_quality < target_quality).order_by(
+        with self._session_scope() as session:
+            return self._find_non_optimal_query(session, target_quality).limit(limit).all()
+
+    def find_first_non_optimal(self, target_quality: float) -> Entity or None:
+        with self._session_scope() as session:
+            self._find_non_optimal_query(session, target_quality).first()
+
+    @staticmethod
+    def _find_non_optimal_query(session, target_quality: float):
+        q1 = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(
+            func.length(Image.text) > 0,
+            Image.created)
+        if q1.count() > 0:
+            return q1
+        else:
+            return session.query(Image).filter(and_(Image.analyser_quality.isnot(None),
+                                                    Image.analyser_quality < target_quality)).order_by(
+                func.length(Image.text) > 0,
                 Image.analyser_quality,
-                Image.created).first()
+                Image.created)
 
     def find_without_image_data(self) -> Entity or None:
         with self._session_scope() as session:

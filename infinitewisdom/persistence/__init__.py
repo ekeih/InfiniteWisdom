@@ -116,7 +116,7 @@ class ImageDataPersistence:
         :param target_quality: the target quality to reach
         :return: a non-optimal entity or None
         """
-        return self._database.find_non_optimal(target_quality)
+        return self._database.find_first_non_optimal(target_quality)
 
     def find_without_image_data(self) -> [Entity]:
         """
