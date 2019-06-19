@@ -57,9 +57,10 @@ class AzureComputerVision(ImageAnalyser):
             'Ocp-Apim-Subscription-Key': self._subscription_key
         }
         # language is set to "en" for improved results, use "unk" if the language is unknown
+        # we also don't need orientation because we know all text is normally oriented
         params = {
             'language': 'en',
-            'detectOrientation': 'true'
+            'detectOrientation': 'false'
         }
 
         # a url can also be used
