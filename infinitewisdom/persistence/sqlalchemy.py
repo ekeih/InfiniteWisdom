@@ -185,7 +185,7 @@ class SQLAlchemyPersistence:
 
     def find_first_non_optimal(self, target_quality: float) -> Entity or None:
         with self._session_scope() as session:
-            self._find_non_optimal_query(session, target_quality).first()
+            return self._find_non_optimal_query(session, target_quality).first()
 
     @staticmethod
     def _find_non_optimal_query(session, target_quality: float):
