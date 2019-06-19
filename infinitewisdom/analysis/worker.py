@@ -89,7 +89,12 @@ class AnalysisWorker(RegularIntervalWorker):
 
         entity.analyser = analyser.get_identifier()
         entity.analyser_quality = analyser.get_quality()
-        entity.text = analyser.find_text(image_data)
+        new_text = analyser.find_text(image_data)
+
+        if (new_text is None or len(new_text) <= 0) and entity.text is not None and len(entity.text) > 0:
+            LOGGER.debug("Ignoring new analysis text because it would delete it")
+        else:
+            entity.text = new_text
 
         self._persistence.update(entity, image_data)
         LOGGER.debug(
