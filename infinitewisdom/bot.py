@@ -201,7 +201,7 @@ if __name__ == '__main__':
         image_analysers.append(AzureComputerVision(key, region, capacity))
 
     # start prometheus server
-    start_http_server(8000)
+    start_http_server(config.STATS_PORT.value)
 
     wisdom_bot = InfiniteWisdomBot(config, persistence, image_analysers)
     crawler = Crawler(config, persistence, image_analysers)

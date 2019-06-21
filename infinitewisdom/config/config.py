@@ -25,7 +25,8 @@ from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_SQL_PERSISTENCE_URL, \
     CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
     CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_INTERVAL, \
-    CONFIG_NODE_UPLOADER, DEFAULT_FILE_PERSISTENCE_BASE_PATH, CONFIG_NODE_MICROSOFT_AZURE
+    CONFIG_NODE_UPLOADER, DEFAULT_FILE_PERSISTENCE_BASE_PATH, CONFIG_NODE_MICROSOFT_AZURE, CONFIG_NODE_PORT, \
+    CONFIG_NODE_STATS
 
 
 class Config:
@@ -189,27 +190,36 @@ class Config:
         ],
         default=5000)
 
-    _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
-                       TELEGRAM_CAPTION_IMAGES_WITH_TEXT,
-                       UPLOADER_CHAT_ID,
-                       UPLOADER_INTERVAL,
-                       CRAWLER_INTERVAL,
-                       SQL_PERSISTENCE_URL, FILE_PERSISTENCE_BASE_PATH,
-                       IMAGE_ANALYSIS_INTERVAL, IMAGE_ANALYSIS_TESSERACT_ENABLED,
-                       IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE,
-                       IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY]
+    STATS_PORT = IntConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_STATS,
+            CONFIG_NODE_PORT
+        ],
+        default=8000
+    )
 
     def __init__(self):
         """
         Creates a config object and reads configuration.
         """
+        self._config_entries = self._find_config_entries()
         self._read_yaml()
         self._read_env()
         self._validate()
+
+    def _find_config_entries(self) -> [ConfigEntry]:
+        """
+        Detects config entry constants in this class
+        :return: list of config entries
+        """
+
+        entries = set()
+        for attribute in map(lambda x: getattr(self, x), dir(self)):
+            if isinstance(attribute, ConfigEntry):
+                entries.add(attribute)
+
+        return list(entries)
 
     def _read_yaml(self) -> None:
         """

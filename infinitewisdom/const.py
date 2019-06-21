@@ -47,6 +47,8 @@ CONFIG_NODE_UPLOADER = "uploader"
 CONFIG_NODE_PERSISTENCE = "persistence"
 CONFIG_NODE_IMAGE_ANALYSIS = "image_analysis"
 CONFIG_NODE_INTERVAL = "interval"
+CONFIG_NODE_STATS = "stats"
+CONFIG_NODE_PORT = "port"
 
 CONFIG_NODE_TESSERACT = "tesseract"
 CONFIG_NODE_GOOGLE_VISION = "google_vision"

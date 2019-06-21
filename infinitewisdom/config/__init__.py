@@ -70,7 +70,12 @@ class ConfigEntry:
 class StringConfigEntry(ConfigEntry):
 
     def _value_to_type(self, value: any) -> any:
-        return str(value)
+        s = str(value)
+        if self._none_allowed:
+            if s.lower() in ['none', 'null', 'nil']:
+                return None
+
+        return s
 
 
 class BoolConfigEntry(ConfigEntry):
