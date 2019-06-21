@@ -19,21 +19,14 @@ import os
 
 import yaml
 
+from infinitewisdom.config import StringConfigEntry, IntConfigEntry, FloatConfigEntry, BoolConfigEntry, ConfigEntry
 from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_SQL_PERSISTENCE_URL, \
     CONFIG_NODE_CRAWLER, CONFIG_NODE_TELEGRAM, CONFIG_NODE_GOOGLE_VISION, \
     CONFIG_NODE_TESSERACT, CONFIG_NODE_ENABLED, CONFIG_NODE_CAPACITY_PER_MONTH, CONFIG_NODE_INTERVAL, \
-    CONFIG_NODE_UPLOADER, DEFAULT_FILE_PERSISTENCE_BASE_PATH, CONFIG_NODE_MICROSOFT_AZURE
-
-
-class ConfigEntry:
-
-    def __init__(self, yaml_path: [str], default: any = None):
-        self.yaml_path = yaml_path
-        self.env_key = "_".join(yaml_path).upper()
-        self.default = default
-        self.value = default
+    CONFIG_NODE_UPLOADER, DEFAULT_FILE_PERSISTENCE_BASE_PATH, CONFIG_NODE_MICROSOFT_AZURE, CONFIG_NODE_PORT, \
+    CONFIG_NODE_STATS
 
 
 class Config:
@@ -44,7 +37,7 @@ class Config:
     LOGGER = logging.getLogger(__name__)
     LOGGER.setLevel(logging.DEBUG)
 
-    TELEGRAM_BOT_TOKEN = ConfigEntry(
+    TELEGRAM_BOT_TOKEN = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
@@ -52,7 +45,7 @@ class Config:
         ],
         default="")
 
-    TELEGRAM_INLINE_BADGE_SIZE = ConfigEntry(
+    TELEGRAM_INLINE_BADGE_SIZE = IntConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
@@ -61,7 +54,7 @@ class Config:
         default=16
     )
 
-    TELEGRAM_GREETING_MESSAGE = ConfigEntry(
+    TELEGRAM_GREETING_MESSAGE = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
@@ -69,7 +62,7 @@ class Config:
         ],
         default='Send /inspire for more inspiration :blush: Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.')
 
-    TELEGRAM_CAPTION_IMAGES_WITH_TEXT = ConfigEntry(
+    TELEGRAM_CAPTION_IMAGES_WITH_TEXT = BoolConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
@@ -77,15 +70,15 @@ class Config:
         ],
         default=False)
 
-    UPLOADER_INTERVAL = ConfigEntry(
+    UPLOADER_INTERVAL = FloatConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_UPLOADER,
             CONFIG_NODE_INTERVAL
         ],
-        default=1)
+        default=1.0)
 
-    UPLOADER_CHAT_ID = ConfigEntry(
+    UPLOADER_CHAT_ID = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_UPLOADER,
@@ -93,7 +86,7 @@ class Config:
         ],
         default=None)
 
-    CRAWLER_INTERVAL = ConfigEntry(
+    CRAWLER_INTERVAL = FloatConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_CRAWLER,
@@ -101,7 +94,7 @@ class Config:
         ],
         default=1.0)
 
-    SQL_PERSISTENCE_URL = ConfigEntry(
+    SQL_PERSISTENCE_URL = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_PERSISTENCE,
@@ -109,7 +102,7 @@ class Config:
         ],
         default=DEFAULT_SQL_PERSISTENCE_URL)
 
-    FILE_PERSISTENCE_BASE_PATH = ConfigEntry(
+    FILE_PERSISTENCE_BASE_PATH = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_PERSISTENCE,
@@ -117,15 +110,15 @@ class Config:
         ],
         default=DEFAULT_FILE_PERSISTENCE_BASE_PATH)
 
-    IMAGE_ANALYSIS_INTERVAL = ConfigEntry(
+    IMAGE_ANALYSIS_INTERVAL = FloatConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
             CONFIG_NODE_INTERVAL
         ],
-        default=1)
+        default=1.0)
 
-    IMAGE_ANALYSIS_TESSERACT_ENABLED = ConfigEntry(
+    IMAGE_ANALYSIS_TESSERACT_ENABLED = BoolConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -134,7 +127,7 @@ class Config:
         ],
         default=False)
 
-    IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED = ConfigEntry(
+    IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED = BoolConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -143,7 +136,7 @@ class Config:
         ],
         default=False)
 
-    IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE = ConfigEntry(
+    IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -152,7 +145,7 @@ class Config:
         ],
         default=None)
 
-    IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY = ConfigEntry(
+    IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY = IntConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -161,7 +154,7 @@ class Config:
         ],
         default=None)
 
-    IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED = ConfigEntry(
+    IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED = BoolConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -170,7 +163,7 @@ class Config:
         ],
         default=False)
 
-    IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY = ConfigEntry(
+    IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -179,7 +172,7 @@ class Config:
         ],
         default=None)
 
-    IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION = ConfigEntry(
+    IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION = StringConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -188,7 +181,7 @@ class Config:
         ],
         default="francecentral")
 
-    IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY = ConfigEntry(
+    IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY = IntConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_IMAGE_ANALYSIS,
@@ -197,27 +190,36 @@ class Config:
         ],
         default=5000)
 
-    _config_entries = [TELEGRAM_BOT_TOKEN, TELEGRAM_GREETING_MESSAGE, TELEGRAM_INLINE_BADGE_SIZE,
-                       TELEGRAM_CAPTION_IMAGES_WITH_TEXT,
-                       UPLOADER_CHAT_ID,
-                       UPLOADER_INTERVAL,
-                       CRAWLER_INTERVAL,
-                       SQL_PERSISTENCE_URL, FILE_PERSISTENCE_BASE_PATH,
-                       IMAGE_ANALYSIS_INTERVAL, IMAGE_ANALYSIS_TESSERACT_ENABLED,
-                       IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED, IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE,
-                       IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION,
-                       IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY]
+    STATS_PORT = IntConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_STATS,
+            CONFIG_NODE_PORT
+        ],
+        default=8000
+    )
 
     def __init__(self):
         """
         Creates a config object and reads configuration.
         """
+        self._config_entries = self._find_config_entries()
         self._read_yaml()
         self._read_env()
         self._validate()
+
+    def _find_config_entries(self) -> [ConfigEntry]:
+        """
+        Detects config entry constants in this class
+        :return: list of config entries
+        """
+
+        entries = set()
+        for attribute in map(lambda x: getattr(self, x), dir(self)):
+            if isinstance(attribute, ConfigEntry):
+                entries.add(attribute)
+
+        return list(entries)
 
     def _read_yaml(self) -> None:
         """

@@ -17,7 +17,7 @@ import logging
 
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.config import Config
+from infinitewisdom.config.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import select_best_available_analyser
 

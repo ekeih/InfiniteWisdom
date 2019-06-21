@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 
-from infinitewisdom.config import Config
+from infinitewisdom.config.config import Config
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     IMAGE_ANALYSIS_TYPE_AZURE
 from infinitewisdom.persistence.image_persistence import ImageDataStore

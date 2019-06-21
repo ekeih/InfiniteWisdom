@@ -20,7 +20,7 @@ import requests
 
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.config import Config
+from infinitewisdom.config.config import Config
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 from infinitewisdom.util import download_image_bytes, create_hash
 

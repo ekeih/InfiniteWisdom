@@ -27,5 +27,6 @@ InfiniteWisdom:
       subscription_key: "1234567890684c3baa5a0605712345ab"
       region: "francecentral"
       capacity_per_month: 5000
-
+  stats:
+    port: 8000
 ...
