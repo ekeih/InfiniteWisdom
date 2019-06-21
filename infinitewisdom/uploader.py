@@ -53,7 +53,7 @@ class TelegramUploader(RegularIntervalWorker):
         if image_data is None:
             return
 
-        file_id = _send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data, caption=entity.text)
+        file_id = _send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
         entity.telegram_file_id = file_id
         self._persistence.update(entity, image_data)
         LOGGER.debug("Send image '{}' to chat '{}' and updated entity.".format(entity.url, self._chat_id))
