@@ -21,6 +21,7 @@ import sys
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
 
+from infinitewisdom.config.config import Config
 from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
@@ -30,7 +31,6 @@ from infinitewisdom.analysis.googlevision import GoogleVision
 from infinitewisdom.analysis.microsoftazure import AzureComputerVision
 from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
-from infinitewisdom.config import Config
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS

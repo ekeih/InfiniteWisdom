@@ -18,7 +18,7 @@ import logging
 from telegram import Bot
 
 from infinitewisdom import RegularIntervalWorker
-from infinitewisdom.config import Config
+from infinitewisdom.config.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import _send_photo
 
