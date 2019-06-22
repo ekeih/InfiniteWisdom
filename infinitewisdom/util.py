@@ -23,6 +23,7 @@ from emoji import emojize
 from telegram import Bot
 
 from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.const import TELEGRAM_CAPTION_LENGTH_LIMIT
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -99,7 +100,8 @@ def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data:
         # remove empty lines
         caption = os.linesep.join([s for s in caption.splitlines() if s.strip()])
         # limit to 200 characters (telegram api limitation)
-        caption = caption[:200]
+        if len(caption) > TELEGRAM_CAPTION_LENGTH_LIMIT:
+            caption = caption[:197] + "…"
 
     message = bot.send_photo(chat_id=chat_id, photo=photo, caption=caption)
     return message.photo[-1].file_id

@@ -18,6 +18,8 @@
 Holds important constants
 """
 
+TELEGRAM_CAPTION_LENGTH_LIMIT = 200
+
 DEFAULT_SQL_PERSISTENCE_URL = "sqlite:///infinitewisdom.db"
 DEFAULT_FILE_PERSISTENCE_BASE_PATH = "./.image_data"
 
