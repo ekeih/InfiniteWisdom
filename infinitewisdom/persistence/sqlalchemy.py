@@ -134,7 +134,7 @@ class SQLAlchemyPersistence:
 
     def get_all(self) -> [Entity]:
         with self._session_scope() as session:
-            return session.query(Image).order_by(Image.id).all()
+            return session.query(Image).order_by(Image.created.desc()).all()
 
     def add(self, entity: Entity):
         image = Image(url=entity.url,
@@ -230,11 +230,9 @@ class SQLAlchemyPersistence:
             return session.query(Image).filter(Image.analyser == analyser).filter(
                 Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
-    def delete(self, url: str) -> None:
+    def delete(self, entity_id: int) -> None:
         with self._session_scope(write=True) as session:
-            entity = session.query(Image).filter_by(url=url).first()
-            if entity is not None:
-                return session.delete(entity)
+            session.query(Image).filter_by(id=entity_id).delete()
 
     def clear(self) -> None:
         raise NotImplementedError()

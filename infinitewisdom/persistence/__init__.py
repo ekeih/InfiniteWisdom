@@ -178,10 +178,10 @@ class ImageDataPersistence:
         :param url: the image url
         """
         try:
-            entity = self._database.find_by_url(url)
-            self._image_data_store.put(entity.image_hash, None)
-
-            self._database.delete(url)
+            entities = self._database.find_by_url(url)
+            for entity in entities:
+                self._image_data_store.put(entity.image_hash, None)
+                self._database.delete(entity.id)
         finally:
             self._update_stats()
 

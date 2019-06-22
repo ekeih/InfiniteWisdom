@@ -1,11 +1,14 @@
+from concurrent.futures.thread import ThreadPoolExecutor
+
 from tqdm import tqdm
 
-from infinitewisdom.config import Config
+from infinitewisdom.config.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import download_image_bytes, create_hash
 
-config = Config()
-
+config = Config(validate=False)
+config.SQL_PERSISTENCE_URL.value = "postgresql://infinitewisdom:infinitewisdom@localhost/infinitewisdom"
+config.FILE_PERSISTENCE_BASE_PATH.value = "/mnt/sdb1/infinitewisdom"
 p = ImageDataPersistence(config)
 
 added = 0
@@ -57,12 +60,11 @@ def migrate_entity(entity):
         current = added + deleted + skipped + errored
 
 
-# with ThreadPoolExecutor(max_workers=16, thread_name_prefix="db-migration") as executor:
-#    for e in entities:
-#        future = executor.submit(migrate_entity, e)
+with ThreadPoolExecutor(max_workers=8, thread_name_prefix="db-migration") as executor:
+    for e in entities:
+        future = executor.submit(migrate_entity, e)
 
-
-for e in entities:
-    migrate_entity(e)
+# for e in entities:
+#    migrate_entity(e)
 
 print("Added {}\nDeleted {}\nSkipped {}\nTotal {} ".format(added, deleted, skipped, total))

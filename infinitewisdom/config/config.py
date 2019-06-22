@@ -199,14 +199,15 @@ class Config:
         default=8000
     )
 
-    def __init__(self):
+    def __init__(self, validate: bool = True):
         """
         Creates a config object and reads configuration.
         """
         self._config_entries = self._find_config_entries()
         self._read_yaml()
         self._read_env()
-        self._validate()
+        if validate:
+            self._validate()
 
     def _find_config_entries(self) -> [ConfigEntry]:
         """
