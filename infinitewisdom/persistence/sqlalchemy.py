@@ -166,6 +166,10 @@ class SQLAlchemyPersistence:
         with self._session_scope() as session:
             return session.query(Image).filter_by(url=url).all()
 
+    def find_by_telegram_file_id(self, telegram_file_id: str) -> [Entity]:
+        with self._session_scope() as session:
+            return session.query(Image).filter_by(telegram_file_id=telegram_file_id).first()
+
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         if limit is None:
             limit = 16

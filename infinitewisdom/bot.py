@@ -64,6 +64,7 @@ class InfiniteWisdomBot:
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
         self._dispatcher.add_handler(InlineQueryHandler(self._inline_query_callback))
         self._dispatcher.add_handler(MessageHandler(Filters.command, self._command_callback))
+        self._dispatcher.add_handler(MessageHandler(Filters.reply, self._reply_callback))
         self._dispatcher.add_handler(ChosenInlineResultHandler(self._inline_result_chosen_callback))
 
     @property
@@ -129,6 +130,30 @@ class InfiniteWisdomBot:
         file_id = _send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
         entity.telegram_file_id = file_id
         self._persistence.update(entity, image_bytes)
+
+    def _reply_callback(self, bot: Bot, update: Update) -> None:
+        """
+        Handles replies of a user
+        :param bot: the bot
+        :param update: the chat update object
+        """
+        from_user = update.message.from_user
+        chat_id = update.message.chat_id
+        text = update.message.text
+
+        reply_to_message = update.message.reply_to_message
+
+        reply_image = next(
+            iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)), None)
+        telegram_file_id = reply_image.file_id
+
+        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+
+        LOGGER.debug(
+            "Received reply from user '{}' in chat '{}' to image_hash '{}' with message: {}".format(from_user.username,
+                                                                                                    chat_id,
+                                                                                                    entity.image_hash,
+                                                                                                    text))
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, update: Update, context: CallbackContext) -> None:

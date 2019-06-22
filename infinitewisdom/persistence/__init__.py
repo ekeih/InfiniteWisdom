@@ -95,6 +95,14 @@ class ImageDataPersistence:
         """
         return self._database.find_by_image_hash(image_hash)
 
+    def find_by_telegram_file_id(self, telegram_file_id: str) -> Entity or None:
+        """
+        Finds an entity with exactly the given telegram file id
+        :param telegram_file_id: the image hash to search for
+        :return: entity or None
+        """
+        return self._database.find_by_telegram_file_id(telegram_file_id)
+
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         """
         Finds a list of entities containing the given text
