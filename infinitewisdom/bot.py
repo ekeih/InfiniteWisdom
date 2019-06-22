@@ -58,6 +58,7 @@ class InfiniteWisdomBot:
         self._image_analysers = image_analysers
 
         self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value, use_context=True)
+        LOGGER.debug("Using bot id '{}' ({})".format(self._updater.bot.id, self._updater.bot.name))
 
         self._dispatcher = self._updater.dispatcher
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
