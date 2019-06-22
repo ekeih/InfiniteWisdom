@@ -23,8 +23,9 @@ sys.path.append(parent_dir)
 
 from infinitewisdom.config.config import Config
 from prometheus_client import start_http_server
-from telegram import InlineQueryResultPhoto, ChatAction, Bot, Update, InlineQueryResultCachedPhoto
-from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, ChosenInlineResultHandler
+from telegram import InlineQueryResultPhoto, ChatAction, Update, InlineQueryResultCachedPhoto
+from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, \
+    ChosenInlineResultHandler, CallbackContext
 
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.analysis.googlevision import GoogleVision
@@ -56,7 +57,7 @@ class InfiniteWisdomBot:
         self._persistence = persistence
         self._image_analysers = image_analysers
 
-        self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value)
+        self._updater = Updater(token=self._config.TELEGRAM_BOT_TOKEN.value, use_context=True)
 
         self._dispatcher = self._updater.dispatcher
         self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
@@ -78,31 +79,33 @@ class InfiniteWisdomBot:
         self._updater.stop()
 
     @START_TIME.time()
-    def _start_callback(self, bot: Bot, update: Update) -> None:
+    def _start_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Welcomes a new user with an example image and a greeting message
         :param bot: the bot
         :param update: the chat update object
         """
-        self._send_random_quote(bot, update)
+        bot = context.bot
+        self._send_random_quote(update, context)
         _send_message(bot=bot, chat_id=update.message.chat_id,
                       message=self._config.TELEGRAM_GREETING_MESSAGE.value)
 
-    def _command_callback(self, bot: Bot, update: Update) -> None:
+    def _command_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Handles commands send by a user
-        :param bot: the bot
         :param update: the chat update object
+        :param context: telegram context
         """
-        self._send_random_quote(bot, update)
+        self._send_random_quote(update, context)
 
     @INSPIRE_TIME.time()
-    def _send_random_quote(self, bot: Bot, update: Update) -> None:
+    def _send_random_quote(self, update: Update, context: CallbackContext) -> None:
         """
         Sends a quote from the pool to the requesting chat
-        :param bot: the bot
         :param update: the chat update object
+        :param context: telegram context
         """
+        bot = context.bot
         chat_id = update.message.chat_id
         bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         entity = self._persistence.get_random()
@@ -122,11 +125,11 @@ class InfiniteWisdomBot:
         self._persistence.update(entity, image_bytes)
 
     @INLINE_TIME.time()
-    def _inline_query_callback(self, bot: Bot, update: Update) -> None:
+    def _inline_query_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Responds to an inline client request with a list of 16 randomly chosen images
-        :param bot: the bot
         :param update: the chat update object
+        :param context: telegram context
         """
         LOGGER.debug('Inline query')
 
@@ -157,7 +160,12 @@ class InfiniteWisdomBot:
         )
 
     @staticmethod
-    def _inline_result_chosen_callback(bot: Bot, update: Update):
+    def _inline_result_chosen_callback(update: Update, context: CallbackContext):
+        """
+        Called when an inline result is chosen by a user
+        :param update: the chat update object
+        :param context: telegram context
+        """
         CHOSEN_INLINE_RESULTS.inc()
 
     @staticmethod
