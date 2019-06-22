@@ -106,7 +106,7 @@ class InfiniteWisdomBot:
         chat_id = update.message.chat_id
         bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         entity = self._persistence.get_random()
-        LOGGER.debug('Got image URL from the pool: {}'.format(entity.url))
+        LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
 
         caption = None
         if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
