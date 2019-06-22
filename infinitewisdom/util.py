@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import hashlib
 import logging
+import os
 from io import BytesIO
 
 import requests
@@ -93,6 +94,12 @@ def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data:
         photo = file_id
     else:
         raise ValueError("At least one of file_id and image_data has to be provided!")
+
+    if caption is not None:
+        # remove empty lines
+        caption = os.linesep.join([s for s in caption.splitlines() if s.strip()])
+        # limit to 200 characters (telegram api limitation)
+        caption = caption[:200]
 
     message = bot.send_photo(chat_id=chat_id, photo=photo, caption=caption)
     return message.photo[-1].file_id
