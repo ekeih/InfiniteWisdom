@@ -2,8 +2,8 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence
 
-p1 = SQLAlchemyPersistence(url="sqlite:///source_infinitewisdom.pickle")
-p2 = SQLAlchemyPersistence(url="sqlite:///target_infinitewisdom.pickle")
+p1 = SQLAlchemyPersistence(url="sqlite:///source_infinitewisdom.db")
+p2 = SQLAlchemyPersistence(url="postgresql://infinitewisdom:infinitewisdom@localhost/infinitewisdom")
 
 p1_total = p1.count()
 added = 0
@@ -16,12 +16,12 @@ def migrate_entity(entity):
     global skipped
     global total
 
-    if len(p2.find_by_url(entity.url)) <= 0:
-        print("Adding: {}".format(entity.url))
+    if len(p2.find_by_image_hash(entity.image_hash)) <= 0:
+        print("Adding: {}".format(entity.image_hash))
         p2.add(entity)
         added += 1
     else:
-        print("Skipping: {}".format(entity.url))
+        print("Skipping: {}".format(entity.image_hash))
         skipped += 1
 
     total = added + skipped
@@ -29,8 +29,7 @@ def migrate_entity(entity):
 
 
 with ThreadPoolExecutor(max_workers=4, thread_name_prefix="db-migration") as executor:
-    # TODO: currently this does not work because there is no interface method to query "all" items
-    for e in p1._entities:
+    for e in p1.get_all():
         future = executor.submit(migrate_entity, e)
 
 print("Added {}/{} entries ({} skipped)".format(added, total, skipped))
