@@ -82,13 +82,13 @@ class Image(Base, Entity):
 
     id = Column(Integer, primary_key=True)
 
-    url = Column(String)
+    url = Column(String, index=True)
     text = Column(String)
     analyser = Column(String)
     analyser_quality = Column(Float)
     created = Column(Float)
-    telegram_file_id = Column(String)
-    image_hash = Column(String)
+    telegram_file_id = Column(String, index=True)
+    image_hash = Column(String, index=True)
 
 
 class SQLAlchemyPersistence:
