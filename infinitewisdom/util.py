@@ -107,11 +107,12 @@ def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data:
     return message.photo[-1].file_id
 
 
-def _send_message(bot: Bot, chat_id: str, message: str):
+def _send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None):
     """
     Sends a text message to the given chat
     :param bot: the bot
     :param chat_id: the chat id to send the message to
     :param message: the message to chat (may contain emoji aliases)
     """
-    bot.send_message(chat_id=chat_id, text=emojize(message, use_aliases=True))
+    emojized_text = emojize(message, use_aliases=True)
+    bot.send_message(chat_id=chat_id, parse_mode=parse_mode, text=emojized_text)

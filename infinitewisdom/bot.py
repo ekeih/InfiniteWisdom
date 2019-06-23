@@ -18,12 +18,15 @@ import logging
 import os
 import sys
 
+from infinitewisdom.const import SUPPORTED_REPLY_COMMANDS, COMMAND_START, REPLY_COMMAND_DELETE, REPLY_COMMAND_TEXT, \
+    IMAGE_ANALYSIS_TYPE_HUMAN
+
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
 
 from infinitewisdom.config.config import Config
 from prometheus_client import start_http_server
-from telegram import InlineQueryResultPhoto, ChatAction, Update, InlineQueryResultCachedPhoto
+from telegram import InlineQueryResultPhoto, ChatAction, Update, InlineQueryResultCachedPhoto, ParseMode
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, \
     ChosenInlineResultHandler, CallbackContext
 
@@ -61,10 +64,27 @@ class InfiniteWisdomBot:
         LOGGER.debug("Using bot id '{}' ({})".format(self._updater.bot.id, self._updater.bot.name))
 
         self._dispatcher = self._updater.dispatcher
-        self._dispatcher.add_handler(CommandHandler('start', self._start_callback))
+        self._dispatcher.add_handler(
+            CommandHandler(COMMAND_START,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._start_callback))
+
+        self._dispatcher.add_handler(
+            MessageHandler(
+                filters=Filters.command & (~ Filters.reply) & (~ Filters.forwarded),
+                callback=self._command_callback))
+
+        self._dispatcher.add_handler(
+            MessageHandler(
+                filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                callback=self._reply_command_callback))
+
+        self._dispatcher.add_handler(
+            MessageHandler(
+                filters=Filters.reply & (~ Filters.forwarded),
+                callback=self._reply_callback))
+
         self._dispatcher.add_handler(InlineQueryHandler(self._inline_query_callback))
-        self._dispatcher.add_handler(MessageHandler(Filters.command, self._command_callback))
-        self._dispatcher.add_handler(MessageHandler(Filters.reply, self._reply_callback))
         self._dispatcher.add_handler(ChosenInlineResultHandler(self._inline_result_chosen_callback))
 
     @property
@@ -103,6 +123,7 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         :param context: telegram context
         """
+        command, args = self._parse_command(update.message.text)
         self._send_random_quote(update, context)
 
     @INSPIRE_TIME.time()
@@ -131,23 +152,33 @@ class InfiniteWisdomBot:
         entity.telegram_file_id = file_id
         self._persistence.update(entity, image_bytes)
 
-    @REPLY_TIME.time()
-    def _reply_callback(self, update: Update, context: CallbackContext) -> None:
+    def _reply_command_callback(self, update: Update, context: CallbackContext) -> None:
         """
-        Handles user reply messages
-        :param update: the chat update object
-        :param context: telegram context
+        Handles commands send as a reply to another message
+        :param update:
+        :param context:
+        :return:
         """
         bot = context.bot
+        message = update.effective_message
+        from_user = message.from_user
+        chat_id = message.chat_id
+        text = message.text
+        reply_to_message = message.reply_to_message
+        is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
 
-        from_user = update.message.from_user
-        chat_id = update.message.chat_id
-        text = update.message.text
+        command, args = self._parse_command(text)
 
-        reply_to_message = update.message.reply_to_message
+        if command not in SUPPORTED_REPLY_COMMANDS:
+            _send_message(bot, chat_id, "Unsupported command: `/{}`".format(command), parse_mode=ParseMode.MARKDOWN)
+            return
 
-        reply_image = next(
-            iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)), None)
+        if reply_to_message.effective_attachment is None:
+            _send_message(bot, chat_id, "You must directly reply to an image send by this bot to use reply commands.")
+            return
+
+        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
+                           None)
         telegram_file_id = reply_image.file_id
 
         entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
@@ -157,6 +188,39 @@ class InfiniteWisdomBot:
                                                                                                     chat_id,
                                                                                                     entity.image_hash,
                                                                                                     text))
+
+        if command == REPLY_COMMAND_DELETE:
+            if is_edit:
+                LOGGER.debug("Ignoring edited delete command")
+                return
+
+            try:
+                # self._persistence.delete(entity)
+                _send_message(bot, chat_id,
+                              "Deleted referenced image from persistence (Hash: {})".format(entity.image_hash))
+            except Exception as e:
+                _send_message(bot, chat_id, "Error deleting image: ```{}```".format(e), parse_mode=ParseMode.MARKDOWN)
+
+        elif command == REPLY_COMMAND_TEXT:
+            try:
+                entity.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
+                entity.analyser_quality = 1.0
+                entity.text = args
+                self._persistence.update(entity)
+                _send_message(bot, chat_id,
+                              "Updated text for referenced image to '{}' (Hash: {})".format(entity.text,
+                                                                                            entity.image_hash))
+            except Exception as e:
+                _send_message(bot, chat_id, "Error updating image: ```{}```".format(e), parse_mode=ParseMode.MARKDOWN)
+
+    @REPLY_TIME.time()
+    def _reply_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        Handles user reply messages
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        pass
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, update: Update, context: CallbackContext) -> None:
@@ -222,6 +286,22 @@ class InfiniteWisdomBot:
                 photo_height=50,
                 photo_width=50
             )
+
+    @staticmethod
+    def _parse_command(text: str) -> (str, [str]):
+        """
+        Parses the given message to a command and its arguments
+        :param text: the text to parse
+        :return: the command and its argument list
+        """
+        if text is None or len(text) <= 0:
+            return None, [0]
+
+        if " " not in text:
+            return text[1:], None
+        else:
+            command, rest = text.split(" ", 1)
+            return command[1:], rest
 
 
 if __name__ == '__main__':

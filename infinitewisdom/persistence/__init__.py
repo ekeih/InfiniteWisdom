@@ -147,11 +147,11 @@ class ImageDataPersistence:
         """
         return self._database.count()
 
-    def update(self, entity: Entity, image_data: bytes or None) -> None:
+    def update(self, entity: Entity, image_data: bytes or None = None) -> None:
         """
         Updates the given entity
         :param entity: the entity with modified fields
-        :param image_data: the image data of the entity
+        :param image_data: the image data of the entity, passing None will not change existing image data
         """
         try:
             existing_entity = self._database.find_by_image_hash(entity.image_hash)
@@ -180,14 +180,14 @@ class ImageDataPersistence:
         """
         return self._database.count_items_by_analyser(analyser)
 
-    def delete(self, url: str) -> None:
+    def delete(self, entity: Entity) -> None:
         """
         Removes an entity from the persistence
-        :param url: the image url
+        :param entity: the entity to delete
         """
         try:
-            entities = self._database.find_by_url(url)
-            for entity in entities:
+            entity = self._database.find_by_image_hash(entity.image_hash)
+            if entity is not None:
                 self._image_data_store.put(entity.image_hash, None)
                 self._database.delete(entity.id)
         finally:
