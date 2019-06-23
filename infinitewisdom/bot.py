@@ -242,8 +242,8 @@ class InfiniteWisdomBot:
                 entity.analyser_quality = None
                 self._persistence.update(entity)
                 _send_message(bot, chat_id,
-                              ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(entity.text,
-                                                                                                         entity.image_hash),
+                              ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
+                                  entity.image_hash),
                               reply_to=message.message_id)
             except Exception as e:
                 _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
