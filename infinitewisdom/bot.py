@@ -66,6 +66,10 @@ class InfiniteWisdomBot:
         self._dispatcher.add_handler(MessageHandler(Filters.command, self._command_callback))
         self._dispatcher.add_handler(ChosenInlineResultHandler(self._inline_result_chosen_callback))
 
+    @property
+    def bot(self):
+        return self._updater.bot
+
     def start(self):
         """
         Starts up the bot.
@@ -88,8 +92,9 @@ class InfiniteWisdomBot:
         """
         bot = context.bot
         self._send_random_quote(update, context)
-        _send_message(bot=bot, chat_id=update.message.chat_id,
-                      message=self._config.TELEGRAM_GREETING_MESSAGE.value)
+        greeting_message = self._config.TELEGRAM_GREETING_MESSAGE.value
+        if greeting_message is not None and len(greeting_message) > 0:
+            _send_message(bot=bot, chat_id=update.message.chat_id, message=greeting_message)
 
     def _command_callback(self, update: Update, context: CallbackContext) -> None:
         """
