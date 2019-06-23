@@ -52,13 +52,13 @@ class Entity:
                "Hash: `{}`\n" \
                "Analyser: `{}`\n" \
                "Analyser quality: `{}`\n" \
-               "Text: ```{}```".format(self.created,
-                                       self.url,
-                                       self.telegram_file_id,
-                                       self.image_hash,
-                                       self.analyser,
-                                       self.analyser_quality,
-                                       self.text)
+               "Text: `{}`".format(self.created,
+                                   self.url,
+                                   self.telegram_file_id,
+                                   self.image_hash,
+                                   self.analyser,
+                                   self.analyser_quality,
+                                   self.text)
 
     @property
     def id(self):
