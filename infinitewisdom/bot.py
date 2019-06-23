@@ -83,8 +83,8 @@ class InfiniteWisdomBot:
     def _start_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Welcomes a new user with an example image and a greeting message
-        :param bot: the bot
         :param update: the chat update object
+        :param context: telegram context
         """
         bot = context.bot
         self._send_random_quote(update, context)
