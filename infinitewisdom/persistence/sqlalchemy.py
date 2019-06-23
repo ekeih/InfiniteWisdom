@@ -45,6 +45,21 @@ class Entity:
         self._telegram_file_id = telegram_file_id
         self._image_hash = image_hash
 
+    def __str__(self):
+        return "Created: `{}`\n" \
+               "URL: {}\n" \
+               "Telegram file id: `{}`\n" \
+               "Hash: `{}`\n" \
+               "Analyser: `{}`\n" \
+               "Analyser quality: `{}`\n" \
+               "Text: ```{}```".format(self.created,
+                                       self.url,
+                                       self.telegram_file_id,
+                                       self.image_hash,
+                                       self.analyser,
+                                       self.analyser_quality,
+                                       self.text)
+
     @property
     def id(self):
         return self.__dict__.get('id', None)

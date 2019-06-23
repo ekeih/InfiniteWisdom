@@ -19,7 +19,7 @@ import os
 import sys
 
 from infinitewisdom.const import SUPPORTED_REPLY_COMMANDS, COMMAND_START, REPLY_COMMAND_DELETE, REPLY_COMMAND_TEXT, \
-    IMAGE_ANALYSIS_TYPE_HUMAN, REPLY_COMMAND_FORCE_ANALYSIS
+    IMAGE_ANALYSIS_TYPE_HUMAN, REPLY_COMMAND_FORCE_ANALYSIS, REPLY_COMMAND_INFO
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -202,7 +202,12 @@ class InfiniteWisdomBot:
                                                                                                     entity.image_hash,
                                                                                                     text))
 
-        if command == REPLY_COMMAND_DELETE:
+        if command == REPLY_COMMAND_INFO:
+            _send_message(bot, chat_id, "{}".format(entity),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+
+        elif command == REPLY_COMMAND_DELETE:
             if is_edit:
                 LOGGER.debug("Ignoring edited delete command")
                 return
