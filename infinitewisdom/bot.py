@@ -19,7 +19,7 @@ import os
 import sys
 
 from infinitewisdom.const import SUPPORTED_REPLY_COMMANDS, COMMAND_START, REPLY_COMMAND_DELETE, REPLY_COMMAND_TEXT, \
-    IMAGE_ANALYSIS_TYPE_HUMAN
+    IMAGE_ANALYSIS_TYPE_HUMAN, REPLY_COMMAND_FORCE_ANALYSIS
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -169,12 +169,25 @@ class InfiniteWisdomBot:
 
         command, args = self._parse_command(text)
 
+        if from_user.username not in self._config.TELEGRAM_ADMIN_USERNAMES.value:
+            _send_message(bot,
+                          chat_id,
+                          ":no_entry_sign: You do not have the required permissions to run this command.".format(
+                              command),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+            return
+
         if command not in SUPPORTED_REPLY_COMMANDS:
-            _send_message(bot, chat_id, "Unsupported command: `/{}`".format(command), parse_mode=ParseMode.MARKDOWN)
+            _send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
             return
 
         if reply_to_message.effective_attachment is None:
-            _send_message(bot, chat_id, "You must directly reply to an image send by this bot to use reply commands.")
+            _send_message(bot, chat_id,
+                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
+                          reply_to=message.message_id)
             return
 
         reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
@@ -197,9 +210,12 @@ class InfiniteWisdomBot:
             try:
                 # self._persistence.delete(entity)
                 _send_message(bot, chat_id,
-                              "Deleted referenced image from persistence (Hash: {})".format(entity.image_hash))
+                              "Deleted referenced image from persistence (Hash: {})".format(entity.image_hash),
+                              reply_to=message.message_id)
             except Exception as e:
-                _send_message(bot, chat_id, "Error deleting image: ```{}```".format(e), parse_mode=ParseMode.MARKDOWN)
+                _send_message(bot, chat_id, ":boom: Error deleting image: ```{}```".format(e),
+                              parse_mode=ParseMode.MARKDOWN,
+                              reply_to=message.message_id)
 
         elif command == REPLY_COMMAND_TEXT:
             try:
@@ -208,10 +224,26 @@ class InfiniteWisdomBot:
                 entity.text = args
                 self._persistence.update(entity)
                 _send_message(bot, chat_id,
-                              "Updated text for referenced image to '{}' (Hash: {})".format(entity.text,
-                                                                                            entity.image_hash))
+                              ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity.text,
+                                                                                                     entity.image_hash),
+                              reply_to=message.message_id)
             except Exception as e:
-                _send_message(bot, chat_id, "Error updating image: ```{}```".format(e), parse_mode=ParseMode.MARKDOWN)
+                _send_message(bot, chat_id, ":boom: Error updating image: ```{}```".format(e),
+                              parse_mode=ParseMode.MARKDOWN,
+                              reply_to=message.message_id)
+        elif command == REPLY_COMMAND_FORCE_ANALYSIS:
+            try:
+                entity.analyser = None
+                entity.analyser_quality = None
+                self._persistence.update(entity)
+                _send_message(bot, chat_id,
+                              ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(entity.text,
+                                                                                                         entity.image_hash),
+                              reply_to=message.message_id)
+            except Exception as e:
+                _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
+                              parse_mode=ParseMode.MARKDOWN,
+                              reply_to=message.message_id)
 
     @REPLY_TIME.time()
     def _reply_callback(self, update: Update, context: CallbackContext) -> None:

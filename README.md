@@ -16,6 +16,7 @@ will always override the value provided in the yaml file.
 
 | Name                                                  | Description                              | Type     | Default                                |
 |-------------------------------------------------------|------------------------------------------|----------|----------------------------------------|
+| INFINITEWISDOM_TELEGRAM_ADMIN_USERNAMES               | Comma separated list of admin usernames that are allowed to execute commands | `[int]` | `[]` |
 | INFINITEWISDOM_TELEGRAM_BOT_TOKEN                     | The bot token used to authenticate the bot with telegram | `str` | `-` |
 | INFINITEWISDOM_TELEGRAM_GREETING_MESSAGE              | Specifies the message a new user is greeted with | `str` | `Send /inspire for more inspiration :) Or use @InfiniteWisdomBot in a group chat and select one of the suggestions.` |
 | INFINITEWISDOM_TELEGRAM_CAPTION_IMAGES_WITH_TEXT      | Specifies whether to caption images with their text | `bool` | `False` |
@@ -49,6 +50,9 @@ and looks like this:
 ```yaml
 InfiniteWisdom:
   telegram:
+    admin_usernames:
+      - "myadminuser"
+      - "myotheradminuser"
     bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     greeting_message: "Hi there!"
     inline_badge_size: 16

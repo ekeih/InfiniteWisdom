@@ -2,6 +2,9 @@
 
 InfiniteWisdom:
   telegram:
+    admin_usernames:
+      - "myadminuser"
+      - "myotheradminuser"
     bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
     greeting_message: "Hi there! :wave:"
     inline_badge_size: 16
