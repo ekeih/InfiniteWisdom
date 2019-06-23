@@ -19,7 +19,7 @@ import os
 import sys
 
 from infinitewisdom.const import SUPPORTED_REPLY_COMMANDS, COMMAND_START, REPLY_COMMAND_DELETE, REPLY_COMMAND_TEXT, \
-    IMAGE_ANALYSIS_TYPE_HUMAN, REPLY_COMMAND_FORCE_ANALYSIS, REPLY_COMMAND_INFO
+    IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, REPLY_COMMAND_INFO, SUPPORTED_COMMANDS, COMMAND_INSPIRE
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -123,8 +123,60 @@ class InfiniteWisdomBot:
         :param update: the chat update object
         :param context: telegram context
         """
+        bot = context.bot
+        message = update.message
+        chat_id = message.chat_id
+        from_user = message.from_user
         command, args = self._parse_command(update.message.text)
-        self._send_random_quote(update, context)
+
+        from_user_is_admin = from_user.username in self._config.TELEGRAM_ADMIN_USERNAMES.value
+
+        if command not in SUPPORTED_COMMANDS:
+            if from_user_is_admin:
+                _send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
+                              parse_mode=ParseMode.MARKDOWN,
+                              reply_to=message.message_id)
+                return
+            else:
+                command = COMMAND_INSPIRE
+
+        if command == COMMAND_INSPIRE:
+            self._send_random_quote(update, context)
+            return
+
+        if not from_user_is_admin:
+            _send_message(bot,
+                          chat_id,
+                          ":no_entry_sign: You do not have the required permissions to run this command.".format(
+                              command),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+            return
+
+        if command == COMMAND_FORCE_ANALYSIS:
+            if args is None:
+                _send_message(bot, chat_id,
+                              ":exclamation: You have to provide the image hash as an argument to the command.",
+                              reply_to=message.message_id)
+                return
+            entity = self._persistence.find_by_image_hash(args)
+            if entity is None:
+                _send_message(bot, chat_id,
+                              ":exclamation: No entity found for hash: {}".format(args),
+                              reply_to=message.message_id)
+                return
+
+            try:
+                entity.analyser = None
+                entity.analyser_quality = None
+                self._persistence.update(entity)
+                _send_message(bot, chat_id,
+                              ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
+                              reply_to=message.message_id)
+            except Exception as e:
+                _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
+                              parse_mode=ParseMode.MARKDOWN,
+                              reply_to=message.message_id)
 
     @INSPIRE_TIME.time()
     def _send_random_quote(self, update: Update, context: CallbackContext) -> None:
@@ -236,7 +288,7 @@ class InfiniteWisdomBot:
                 _send_message(bot, chat_id, ":boom: Error updating image: ```{}```".format(e),
                               parse_mode=ParseMode.MARKDOWN,
                               reply_to=message.message_id)
-        elif command == REPLY_COMMAND_FORCE_ANALYSIS:
+        elif command == COMMAND_FORCE_ANALYSIS:
             try:
                 entity.analyser = None
                 entity.analyser_quality = None
