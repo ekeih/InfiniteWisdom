@@ -34,7 +34,7 @@ from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
+from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, REPLY_TIME
 from infinitewisdom.uploader import TelegramUploader
 from infinitewisdom.util import _send_photo, _send_message
 
@@ -131,12 +131,15 @@ class InfiniteWisdomBot:
         entity.telegram_file_id = file_id
         self._persistence.update(entity, image_bytes)
 
-    def _reply_callback(self, bot: Bot, update: Update) -> None:
+    @REPLY_TIME.time()
+    def _reply_callback(self, update: Update, context: CallbackContext) -> None:
         """
-        Handles replies of a user
-        :param bot: the bot
+        Handles user reply messages
         :param update: the chat update object
+        :param context: telegram context
         """
+        bot = context.bot
+
         from_user = update.message.from_user
         chat_id = update.message.chat_id
         text = update.message.text
