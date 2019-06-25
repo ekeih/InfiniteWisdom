@@ -97,15 +97,13 @@ def restricted(func: callable):
         bot = context.bot
         message = update.message
         chat_id = message.chat_id
-        command, argument = parse_telegram_command(message.text)
         username = update.effective_user.username
 
         whitelist = self._config.TELEGRAM_ADMIN_USERNAMES.value
         if username is None or username not in whitelist:
             _send_message(bot,
                           chat_id,
-                          ":no_entry_sign: You do not have the required permissions to run this command.".format(
-                              command),
+                          ":no_entry_sign: You do not have the required permissions to run this command.",
                           parse_mode=ParseMode.MARKDOWN,
                           reply_to=message.message_id)
             return
