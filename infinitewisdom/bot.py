@@ -13,13 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+import functools
 import logging
 import os
 import sys
 
-from infinitewisdom.const import SUPPORTED_REPLY_COMMANDS, COMMAND_START, REPLY_COMMAND_DELETE, REPLY_COMMAND_TEXT, \
-    IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, REPLY_COMMAND_INFO, SUPPORTED_COMMANDS, COMMAND_INSPIRE
+from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -37,13 +37,145 @@ from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, REPLY_TIME
+from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
 from infinitewisdom.uploader import TelegramUploader
-from infinitewisdom.util import _send_photo, _send_message
+from infinitewisdom.util import _send_photo, _send_message, parse_telegram_command
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+
+def respond_on_error(func: callable):
+    """
+    Decorator that wraps functions and responds with an error message to the user if an error occurs.
+    Note that this decorator should be applied after the ```restricted``` decorator to prevent leaking error messages.
+    :return: the decorated method
+    """
+
+    if not callable(func):
+        raise AttributeError("Unsupported type: {}".format(func))
+
+    @functools.wraps(func)
+    def wrapper(self, update: Update, context: CallbackContext, *args, **kwargs):
+        bot = context.bot
+        message = update.message
+        chat_id = message.chat_id
+        username = update.effective_user.username
+
+        whitelist = self._config.TELEGRAM_ADMIN_USERNAMES.value
+
+        try:
+            return func(self, update, context, *args, **kwargs)
+        except Exception as err:
+            import traceback
+            exception_text = "\n".join(list(map(lambda x: "{}:{}\n\t{}".format(x.filename, x.lineno, x.line),
+                                                traceback.extract_tb(err.__traceback__))))
+            if username in whitelist:
+                _send_message(bot,
+                              chat_id,
+                              ":boom: There was an error running your command:\n\n```\n{}\n```".format(
+                                  exception_text),
+                              parse_mode=ParseMode.MARKDOWN,
+                              reply_to=message.message_id)
+            raise err
+
+    return wrapper
+
+
+def restricted(func: callable):
+    """
+    Decorator that can be used on command callbacks to restrict its usage to admin users
+    :return: the decorated method
+    """
+
+    if not callable(func):
+        raise AttributeError("Unsupported type: {}".format(func))
+
+    @functools.wraps(func)
+    def wrapper(self, update: Update, context: CallbackContext, *args, **kwargs):
+        bot = context.bot
+        message = update.message
+        chat_id = message.chat_id
+        command, argument = parse_telegram_command(message.text)
+        username = update.effective_user.username
+
+        whitelist = self._config.TELEGRAM_ADMIN_USERNAMES.value
+        if username is None or username not in whitelist:
+            _send_message(bot,
+                          chat_id,
+                          ":no_entry_sign: You do not have the required permissions to run this command.".format(
+                              command),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+            return
+
+        # otherwise call wrapped function as normal
+        return func(self, update, context, *args, **kwargs)
+
+    return wrapper
+
+
+def requires_command_argument(error_message: str = None):
+    """
+    Decorator to indicate that a command requires an argument to be called.
+    :return:
+    """
+
+    if error_message is None:
+        error_message = ":exclamation: This command requires an argument."
+
+    def decorator(func: callable):
+        if not callable(func):
+            raise AttributeError("Unsupported type: {}".format(func))
+
+        @functools.wraps(func)
+        def wrapper(self, update: Update, context: CallbackContext, *args, **kwargs):
+            bot = context.bot
+            message = update.effective_message
+            command, argument = parse_telegram_command(message.text)
+            chat_id = message.chat_id
+
+            if argument is None:
+                _send_message(bot, chat_id,
+                              error_message,
+                              reply_to=message.message_id)
+                return
+
+            # otherwise call wrapped function as normal
+            return func(self, update, context, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def requires_image_reply(func):
+    """
+    Decorator to indicate that a command requires to be run as a reply to an image.
+    :return:
+    """
+
+    if not callable(func):
+        raise AttributeError("Unsupported type: {}".format(func))
+
+    @functools.wraps(func)
+    def wrapped(self, update: Update, context: CallbackContext, *args, **kwargs):
+        bot = context.bot
+        message = update.effective_message
+        chat_id = message.chat_id
+        reply_to_message = message.reply_to_message
+
+        if reply_to_message.effective_attachment is None:
+            _send_message(bot, chat_id,
+                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
+                          reply_to=message.message_id)
+            return
+
+        # otherwise call wrapped function as normal
+        return func(self, update, context, *args, **kwargs)
+
+    return wrapped
 
 
 class InfiniteWisdomBot:
@@ -70,19 +202,40 @@ class InfiniteWisdomBot:
                            callback=self._start_callback))
 
         self._dispatcher.add_handler(
-            MessageHandler(
-                filters=Filters.command & (~ Filters.reply) & (~ Filters.forwarded),
-                callback=self._command_callback))
+            CommandHandler(COMMAND_INSPIRE,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._inspire_callback))
 
         self._dispatcher.add_handler(
-            MessageHandler(
-                filters=Filters.command & Filters.reply & (~ Filters.forwarded),
-                callback=self._reply_command_callback))
+            CommandHandler(COMMAND_FORCE_ANALYSIS,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._forceanalysis_callback))
 
         self._dispatcher.add_handler(
+            CommandHandler(REPLY_COMMAND_INFO,
+                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           callback=self._reply_info_command_callback))
+
+        self._dispatcher.add_handler(
+            CommandHandler(REPLY_COMMAND_TEXT,
+                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           callback=self._reply_text_command_callback))
+
+        self._dispatcher.add_handler(
+            CommandHandler(COMMAND_FORCE_ANALYSIS,
+                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           callback=self._reply_force_analysis_command_callback))
+
+        self._dispatcher.add_handler(
+            CommandHandler(REPLY_COMMAND_DELETE,
+                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           callback=self._reply_delete_command_callback))
+
+        # unknown command handler
+        self._dispatcher.add_handler(
             MessageHandler(
-                filters=Filters.reply & (~ Filters.forwarded),
-                callback=self._reply_callback))
+                filters=Filters.command & (~ Filters.forwarded),
+                callback=self._unknown_command_callback))
 
         self._dispatcher.add_handler(InlineQueryHandler(self._inline_query_callback))
         self._dispatcher.add_handler(ChosenInlineResultHandler(self._inline_result_chosen_callback))
@@ -117,130 +270,63 @@ class InfiniteWisdomBot:
         if greeting_message is not None and len(greeting_message) > 0:
             _send_message(bot=bot, chat_id=update.message.chat_id, message=greeting_message)
 
-    def _command_callback(self, update: Update, context: CallbackContext) -> None:
+    @respond_on_error
+    @INSPIRE_TIME.time()
+    def _inspire_callback(self, update: Update, context: CallbackContext) -> None:
         """
-        Handles commands send by a user
+        /inspire command handler
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        self._send_random_quote(update, context)
+
+    @restricted
+    @respond_on_error
+    @requires_command_argument(
+        error_message=":exclamation: You have to provide the image hash as an argument to the command.")
+    def _forceanalysis_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        /forceanalysis command handler (with an argument)
         :param update: the chat update object
         :param context: telegram context
         """
         bot = context.bot
         message = update.message
         chat_id = message.chat_id
-        from_user = message.from_user
-        command, args = self._parse_command(update.message.text)
+        command, argument = parse_telegram_command(message.text)
 
-        from_user_is_admin = from_user.username in self._config.TELEGRAM_ADMIN_USERNAMES.value
-
-        if command not in SUPPORTED_COMMANDS:
-            if from_user_is_admin:
-                _send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
-                              parse_mode=ParseMode.MARKDOWN,
-                              reply_to=message.message_id)
-                return
-            else:
-                command = COMMAND_INSPIRE
-
-        if command == COMMAND_INSPIRE:
-            self._send_random_quote(update, context)
-            return
-
-        if not from_user_is_admin:
-            _send_message(bot,
-                          chat_id,
-                          ":no_entry_sign: You do not have the required permissions to run this command.".format(
-                              command),
-                          parse_mode=ParseMode.MARKDOWN,
+        entity = self._persistence.find_by_image_hash(argument)
+        if entity is None:
+            _send_message(bot, chat_id,
+                          ":exclamation: No entity found for hash: {}".format(argument),
                           reply_to=message.message_id)
             return
 
-        if command == COMMAND_FORCE_ANALYSIS:
-            if args is None:
-                _send_message(bot, chat_id,
-                              ":exclamation: You have to provide the image hash as an argument to the command.",
-                              reply_to=message.message_id)
-                return
-            entity = self._persistence.find_by_image_hash(args)
-            if entity is None:
-                _send_message(bot, chat_id,
-                              ":exclamation: No entity found for hash: {}".format(args),
-                              reply_to=message.message_id)
-                return
+        try:
+            entity.analyser = None
+            entity.analyser_quality = None
+            self._persistence.update(entity)
+            _send_message(bot, chat_id,
+                          ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
+                          reply_to=message.message_id)
+        except Exception as e:
+            _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
 
-            try:
-                entity.analyser = None
-                entity.analyser_quality = None
-                self._persistence.update(entity)
-                _send_message(bot, chat_id,
-                              ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
-                              reply_to=message.message_id)
-            except Exception as e:
-                _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
-                              parse_mode=ParseMode.MARKDOWN,
-                              reply_to=message.message_id)
-
-    @INSPIRE_TIME.time()
-    def _send_random_quote(self, update: Update, context: CallbackContext) -> None:
+    @requires_image_reply
+    @restricted
+    @respond_on_error
+    def _reply_info_command_callback(self, update: Update, context: CallbackContext) -> None:
         """
-        Sends a quote from the pool to the requesting chat
+        /info reply command handler
         :param update: the chat update object
         :param context: telegram context
         """
         bot = context.bot
-        chat_id = update.message.chat_id
-        bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-        entity = self._persistence.get_random()
-        LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
-
-        caption = None
-        if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
-            caption = entity.text
-
-        if entity.telegram_file_id is not None:
-            _send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
-            return
-
-        image_bytes = self._persistence._image_data_store.get(entity.image_hash)
-        file_id = _send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
-        entity.telegram_file_id = file_id
-        self._persistence.update(entity, image_bytes)
-
-    def _reply_command_callback(self, update: Update, context: CallbackContext) -> None:
-        """
-        Handles commands send as a reply to another message
-        :param update:
-        :param context:
-        :return:
-        """
-        bot = context.bot
         message = update.effective_message
-        from_user = message.from_user
         chat_id = message.chat_id
-        text = message.text
         reply_to_message = message.reply_to_message
-        is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
-
-        command, args = self._parse_command(text)
-
-        if from_user.username not in self._config.TELEGRAM_ADMIN_USERNAMES.value:
-            _send_message(bot,
-                          chat_id,
-                          ":no_entry_sign: You do not have the required permissions to run this command.".format(
-                              command),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
-            return
-
-        if command not in SUPPORTED_REPLY_COMMANDS:
-            _send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
-            return
-
-        if reply_to_message.effective_attachment is None:
-            _send_message(bot, chat_id,
-                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
-                          reply_to=message.message_id)
-            return
 
         reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
                            None)
@@ -248,68 +334,132 @@ class InfiniteWisdomBot:
 
         entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
 
-        LOGGER.debug(
-            "Received reply from user '{}' in chat '{}' to image_hash '{}' with message: {}".format(from_user.username,
-                                                                                                    chat_id,
-                                                                                                    entity.image_hash,
-                                                                                                    text))
+        _send_message(bot, chat_id, "{}".format(entity),
+                      parse_mode=ParseMode.MARKDOWN,
+                      reply_to=message.message_id)
 
-        if command == REPLY_COMMAND_INFO:
-            _send_message(bot, chat_id, "{}".format(entity),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
-
-        elif command == REPLY_COMMAND_DELETE:
-            if is_edit:
-                LOGGER.debug("Ignoring edited delete command")
-                return
-
-            try:
-                # self._persistence.delete(entity)
-                _send_message(bot, chat_id,
-                              "Deleted referenced image from persistence (Hash: {})".format(entity.image_hash),
-                              reply_to=message.message_id)
-            except Exception as e:
-                _send_message(bot, chat_id, ":boom: Error deleting image: ```{}```".format(e),
-                              parse_mode=ParseMode.MARKDOWN,
-                              reply_to=message.message_id)
-
-        elif command == REPLY_COMMAND_TEXT:
-            try:
-                entity.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
-                entity.analyser_quality = 1.0
-                entity.text = args
-                self._persistence.update(entity)
-                _send_message(bot, chat_id,
-                              ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity.text,
-                                                                                                     entity.image_hash),
-                              reply_to=message.message_id)
-            except Exception as e:
-                _send_message(bot, chat_id, ":boom: Error updating image: ```{}```".format(e),
-                              parse_mode=ParseMode.MARKDOWN,
-                              reply_to=message.message_id)
-        elif command == COMMAND_FORCE_ANALYSIS:
-            try:
-                entity.analyser = None
-                entity.analyser_quality = None
-                self._persistence.update(entity)
-                _send_message(bot, chat_id,
-                              ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
-                                  entity.image_hash),
-                              reply_to=message.message_id)
-            except Exception as e:
-                _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
-                              parse_mode=ParseMode.MARKDOWN,
-                              reply_to=message.message_id)
-
-    @REPLY_TIME.time()
-    def _reply_callback(self, update: Update, context: CallbackContext) -> None:
+    @requires_image_reply
+    @restricted
+    @respond_on_error
+    def _reply_text_command_callback(self, update: Update, context: CallbackContext) -> None:
         """
-        Handles user reply messages
+        /text reply command handler
         :param update: the chat update object
         :param context: telegram context
         """
-        pass
+        bot = context.bot
+        message = update.effective_message
+        chat_id = message.chat_id
+        reply_to_message = message.reply_to_message
+        command, args = parse_telegram_command(message.text)
+
+        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
+                           None)
+        telegram_file_id = reply_image.file_id
+        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+
+        try:
+            entity.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
+            entity.analyser_quality = 1.0
+            entity.text = args
+            self._persistence.update(entity)
+            _send_message(bot, chat_id,
+                          ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity.text,
+                                                                                                 entity.image_hash),
+                          reply_to=message.message_id)
+        except Exception as e:
+            _send_message(bot, chat_id, ":boom: Error updating image: ```{}```".format(e),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+
+    @requires_image_reply
+    @restricted
+    @respond_on_error
+    def _reply_delete_command_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        /text reply command handler
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = message.chat_id
+        reply_to_message = message.reply_to_message
+        is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
+
+        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
+                           None)
+        telegram_file_id = reply_image.file_id
+        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+
+        if is_edit:
+            LOGGER.debug("Ignoring edited delete command")
+            return
+
+        try:
+            # self._persistence.delete(entity)
+            _send_message(bot, chat_id,
+                          "Deleted referenced image from persistence (Hash: {})".format(entity.image_hash),
+                          reply_to=message.message_id)
+        except Exception as e:
+            _send_message(bot, chat_id, ":boom: Error deleting image: ```{}```".format(e),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+
+    @restricted
+    @respond_on_error
+    @requires_image_reply
+    def _reply_force_analysis_command_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        /forceanalysis reply command handler
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = message.chat_id
+        reply_to_message = message.reply_to_message
+        is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
+
+        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
+                           None)
+        telegram_file_id = reply_image.file_id
+        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+
+        try:
+            entity.analyser = None
+            entity.analyser_quality = None
+            self._persistence.update(entity)
+            _send_message(bot, chat_id,
+                          ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
+                              entity.image_hash),
+                          reply_to=message.message_id)
+        except Exception as e:
+            _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+
+    @respond_on_error
+    def _unknown_command_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        Handles unknown commands send by a user
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        bot = context.bot
+        message = update.message
+        chat_id = message.chat_id
+        from_user = message.from_user
+        command, args = parse_telegram_command(message.text)
+
+        from_user_is_admin = from_user.username in self._config.TELEGRAM_ADMIN_USERNAMES.value
+        if from_user_is_admin:
+            _send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
+                          parse_mode=ParseMode.MARKDOWN,
+                          reply_to=message.message_id)
+            return
+        else:
+            self._inspire_callback(update, context)
 
     @INLINE_TIME.time()
     def _inline_query_callback(self, update: Update, context: CallbackContext) -> None:
@@ -355,6 +505,31 @@ class InfiniteWisdomBot:
         """
         CHOSEN_INLINE_RESULTS.inc()
 
+    def _send_random_quote(self, update: Update, context: CallbackContext) -> None:
+        """
+        Sends a quote from the pool to the requesting chat
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        bot = context.bot
+        chat_id = update.message.chat_id
+        bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+        entity = self._persistence.get_random()
+        LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
+
+        caption = None
+        if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
+            caption = entity.text
+
+        if entity.telegram_file_id is not None:
+            _send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
+            return
+
+        image_bytes = self._persistence._image_data_store.get(entity.image_hash)
+        file_id = _send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+        entity.telegram_file_id = file_id
+        self._persistence.update(entity, image_bytes)
+
     @staticmethod
     def _entity_to_inline_query_result(entity: Entity):
         """
@@ -375,22 +550,6 @@ class InfiniteWisdomBot:
                 photo_height=50,
                 photo_width=50
             )
-
-    @staticmethod
-    def _parse_command(text: str) -> (str, [str]):
-        """
-        Parses the given message to a command and its arguments
-        :param text: the text to parse
-        :return: the command and its argument list
-        """
-        if text is None or len(text) <= 0:
-            return None, [0]
-
-        if " " not in text:
-            return text[1:], None
-        else:
-            command, rest = text.split(" ", 1)
-            return command[1:], rest
 
 
 if __name__ == '__main__':
