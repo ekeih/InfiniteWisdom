@@ -16,6 +16,7 @@
 import logging
 import time
 from contextlib import contextmanager
+from datetime import datetime
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
 from sqlalchemy.ext.declarative import declarative_base
@@ -52,7 +53,7 @@ class Entity:
                "Hash: `{}`\n" \
                "Analyser: `{}`\n" \
                "Analyser quality: `{}`\n" \
-               "Text: `{}`".format(self.created,
+               "Text: `{}`".format(datetime.fromtimestamp(self.created),
                                    self.url,
                                    self.telegram_file_id,
                                    self.image_hash,
