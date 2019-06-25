@@ -19,7 +19,7 @@ import os
 import sys
 
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
 
 parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
 sys.path.append(parent_dir)
@@ -37,7 +37,7 @@ from infinitewisdom.analysis.tesseract import Tesseract
 from infinitewisdom.analysis.worker import AnalysisWorker
 from infinitewisdom.crawler import Crawler
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS
+from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, get_metrics
 from infinitewisdom.uploader import TelegramUploader
 from infinitewisdom.util import _send_photo, _send_message, parse_telegram_command
 
@@ -218,6 +218,11 @@ class InfiniteWisdomBot:
                            callback=self._forceanalysis_callback))
 
         self._dispatcher.add_handler(
+            CommandHandler(COMMAND_STATS,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._stats_callback))
+
+        self._dispatcher.add_handler(
             CommandHandler(REPLY_COMMAND_INFO,
                            filters=Filters.command & Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_info_command_callback))
@@ -314,6 +319,45 @@ class InfiniteWisdomBot:
         _send_message(bot, chat_id,
                       ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
                       reply_to=message.message_id)
+
+    @restricted
+    @respond_on_error
+    def _stats_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        /stats command handler
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        bot = context.bot
+        message = update.message
+        chat_id = message.chat_id
+
+        def format_sample(sample):
+            result = "  "
+            if len(sample[0]) > 0:
+                result += str(sample[0])
+            if len(sample[1]) > 0:
+                result += str(sample[1])
+
+            if len(result) > 0:
+                result += " "
+            result += str(sample[2])
+
+            return result
+
+        def format_samples(samples):
+            return "\n".join(list(map(format_sample, samples)))
+
+        def format_metric(metric):
+            name = metric._name
+            samples = list(metric._samples())
+            samples_text = format_samples(samples)
+
+            return "{}:\n{}".format(name, samples_text)
+
+        text = "\n\n".join(map(format_metric, get_metrics()))
+
+        _send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @restricted
     @respond_on_error

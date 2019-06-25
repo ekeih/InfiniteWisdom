@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from prometheus_client import Gauge, Counter, Summary
+from prometheus_client.metrics import MetricWrapperBase
 
 POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
 TELEGRAM_ENTITIES_COUNT = Gauge('telegram_entities_count',
@@ -31,3 +32,12 @@ INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire
 REPLY_TIME = Summary('reply_processing_seconds', 'Time spent in the reply message handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 CHOSEN_INLINE_RESULTS = Counter('chosen_inline_results', 'Amount of inline results that were chosen by a user')
+
+
+def get_metrics() -> []:
+    entries = set()
+    for name, obj in globals().items():
+        if isinstance(obj, MetricWrapperBase):
+            entries.add(obj)
+
+    return list(entries)
