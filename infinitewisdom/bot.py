@@ -172,8 +172,14 @@ def requires_image_reply(func):
                           reply_to=message.message_id)
             return
 
+        reply_to_message = message.reply_to_message
+        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
+                           None)
+        telegram_file_id = reply_image.file_id
+        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+
         # otherwise call wrapped function as normal
-        return func(self, update, context, *args, **kwargs)
+        return func(self, update, context, entity, *args, **kwargs)
 
     return wrapped
 
@@ -302,22 +308,18 @@ class InfiniteWisdomBot:
                           reply_to=message.message_id)
             return
 
-        try:
-            entity.analyser = None
-            entity.analyser_quality = None
-            self._persistence.update(entity)
-            _send_message(bot, chat_id,
-                          ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
-                          reply_to=message.message_id)
-        except Exception as e:
-            _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
+        entity.analyser = None
+        entity.analyser_quality = None
+        self._persistence.update(entity)
+        _send_message(bot, chat_id,
+                      ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
+                      reply_to=message.message_id)
 
-    @requires_image_reply
     @restricted
     @respond_on_error
-    def _reply_info_command_callback(self, update: Update, context: CallbackContext) -> None:
+    @requires_image_reply
+    def _reply_info_command_callback(self, update: Update, context: CallbackContext,
+                                     entity_of_reply: Entity or None) -> None:
         """
         /info reply command handler
         :param update: the chat update object
@@ -326,22 +328,16 @@ class InfiniteWisdomBot:
         bot = context.bot
         message = update.effective_message
         chat_id = message.chat_id
-        reply_to_message = message.reply_to_message
 
-        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
-                           None)
-        telegram_file_id = reply_image.file_id
-
-        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
-
-        _send_message(bot, chat_id, "{}".format(entity),
+        _send_message(bot, chat_id, "{}".format(entity_of_reply),
                       parse_mode=ParseMode.MARKDOWN,
                       reply_to=message.message_id)
 
-    @requires_image_reply
     @restricted
     @respond_on_error
-    def _reply_text_command_callback(self, update: Update, context: CallbackContext) -> None:
+    @requires_image_reply
+    def _reply_text_command_callback(self, update: Update, context: CallbackContext,
+                                     entity_of_reply: Entity or None) -> None:
         """
         /text reply command handler
         :param update: the chat update object
@@ -350,32 +346,22 @@ class InfiniteWisdomBot:
         bot = context.bot
         message = update.effective_message
         chat_id = message.chat_id
-        reply_to_message = message.reply_to_message
         command, args = parse_telegram_command(message.text)
 
-        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
-                           None)
-        telegram_file_id = reply_image.file_id
-        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+        entity_of_reply.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
+        entity_of_reply.analyser_quality = 1.0
+        entity_of_reply.text = args
+        self._persistence.update(entity_of_reply)
+        _send_message(bot, chat_id,
+                      ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity_of_reply.text,
+                                                                                             entity_of_reply.image_hash),
+                      reply_to=message.message_id)
 
-        try:
-            entity.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
-            entity.analyser_quality = 1.0
-            entity.text = args
-            self._persistence.update(entity)
-            _send_message(bot, chat_id,
-                          ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity.text,
-                                                                                                 entity.image_hash),
-                          reply_to=message.message_id)
-        except Exception as e:
-            _send_message(bot, chat_id, ":boom: Error updating image: ```{}```".format(e),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
-
-    @requires_image_reply
     @restricted
     @respond_on_error
-    def _reply_delete_command_callback(self, update: Update, context: CallbackContext) -> None:
+    @requires_image_reply
+    def _reply_delete_command_callback(self, update: Update, context: CallbackContext,
+                                       entity_of_reply: Entity or None) -> None:
         """
         /text reply command handler
         :param update: the chat update object
@@ -384,32 +370,22 @@ class InfiniteWisdomBot:
         bot = context.bot
         message = update.effective_message
         chat_id = message.chat_id
-        reply_to_message = message.reply_to_message
         is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
-
-        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
-                           None)
-        telegram_file_id = reply_image.file_id
-        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
 
         if is_edit:
             LOGGER.debug("Ignoring edited delete command")
             return
 
-        try:
-            # self._persistence.delete(entity)
-            _send_message(bot, chat_id,
-                          "Deleted referenced image from persistence (Hash: {})".format(entity.image_hash),
-                          reply_to=message.message_id)
-        except Exception as e:
-            _send_message(bot, chat_id, ":boom: Error deleting image: ```{}```".format(e),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
+        self._persistence.delete(entity_of_reply)
+        _send_message(bot, chat_id,
+                      "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
+                      reply_to=message.message_id)
 
     @restricted
     @respond_on_error
     @requires_image_reply
-    def _reply_force_analysis_command_callback(self, update: Update, context: CallbackContext) -> None:
+    def _reply_force_analysis_command_callback(self, update: Update, context: CallbackContext,
+                                               entity_of_reply: Entity or None) -> None:
         """
         /forceanalysis reply command handler
         :param update: the chat update object
@@ -418,26 +394,14 @@ class InfiniteWisdomBot:
         bot = context.bot
         message = update.effective_message
         chat_id = message.chat_id
-        reply_to_message = message.reply_to_message
-        is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
 
-        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
-                           None)
-        telegram_file_id = reply_image.file_id
-        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
-
-        try:
-            entity.analyser = None
-            entity.analyser_quality = None
-            self._persistence.update(entity)
-            _send_message(bot, chat_id,
-                          ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
-                              entity.image_hash),
-                          reply_to=message.message_id)
-        except Exception as e:
-            _send_message(bot, chat_id, ":boom: Error resetting analyser data: ```{}```".format(e),
-                          parse_mode=ParseMode.MARKDOWN,
-                          reply_to=message.message_id)
+        entity_of_reply.analyser = None
+        entity_of_reply.analyser_quality = None
+        self._persistence.update(entity_of_reply)
+        _send_message(bot, chat_id,
+                      ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
+                          entity_of_reply.image_hash),
+                      reply_to=message.message_id)
 
     @respond_on_error
     def _unknown_command_callback(self, update: Update, context: CallbackContext) -> None:
