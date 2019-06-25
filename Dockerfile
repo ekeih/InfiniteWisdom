@@ -9,4 +9,4 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
-CMD [ "python", "./infinitewisdom/bot.py" ]
+CMD [ "python", "./infinitewisdom/main.py" ]
