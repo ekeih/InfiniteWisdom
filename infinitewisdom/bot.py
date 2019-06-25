@@ -503,12 +503,12 @@ class InfiniteWisdomBot:
         """
         if entity.telegram_file_id is not None:
             return InlineQueryResultCachedPhoto(
-                id=entity.url,
+                id=entity.image_hash,
                 photo_file_id=str(entity.telegram_file_id),
             )
         else:
             return InlineQueryResultPhoto(
-                id=entity.url,
+                id=entity.image_hash,
                 photo_url=entity.url,
                 thumb_url=entity.url,
                 photo_height=50,
