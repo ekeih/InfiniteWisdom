@@ -16,6 +16,7 @@
 import logging
 import time
 from contextlib import contextmanager
+from datetime import datetime
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
 from sqlalchemy.ext.declarative import declarative_base
@@ -44,6 +45,21 @@ class Entity:
         self.created = created
         self._telegram_file_id = telegram_file_id
         self._image_hash = image_hash
+
+    def __str__(self):
+        return "Created: `{}`\n" \
+               "URL: {}\n" \
+               "Telegram file id: `{}`\n" \
+               "Hash: `{}`\n" \
+               "Analyser: `{}`\n" \
+               "Analyser quality: `{}`\n" \
+               "Text: `{}`".format(datetime.fromtimestamp(self.created),
+                                   self.url,
+                                   self.telegram_file_id,
+                                   self.image_hash,
+                                   self.analyser,
+                                   self.analyser_quality,
+                                   self.text)
 
     @property
     def id(self):
@@ -165,6 +181,10 @@ class SQLAlchemyPersistence:
     def find_by_url(self, url: str) -> [Entity]:
         with self._session_scope() as session:
             return session.query(Image).filter_by(url=url).all()
+
+    def find_by_telegram_file_id(self, telegram_file_id: str) -> [Entity]:
+        with self._session_scope() as session:
+            return session.query(Image).filter_by(telegram_file_id=telegram_file_id).first()
 
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         if limit is None:

@@ -95,6 +95,14 @@ class ImageDataPersistence:
         """
         return self._database.find_by_image_hash(image_hash)
 
+    def find_by_telegram_file_id(self, telegram_file_id: str) -> Entity or None:
+        """
+        Finds an entity with exactly the given telegram file id
+        :param telegram_file_id: the image hash to search for
+        :return: entity or None
+        """
+        return self._database.find_by_telegram_file_id(telegram_file_id)
+
     def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
         """
         Finds a list of entities containing the given text
@@ -139,11 +147,11 @@ class ImageDataPersistence:
         """
         return self._database.count()
 
-    def update(self, entity: Entity, image_data: bytes or None) -> None:
+    def update(self, entity: Entity, image_data: bytes or None = None) -> None:
         """
         Updates the given entity
         :param entity: the entity with modified fields
-        :param image_data: the image data of the entity
+        :param image_data: the image data of the entity, passing None will not change existing image data
         """
         try:
             existing_entity = self._database.find_by_image_hash(entity.image_hash)
@@ -172,14 +180,14 @@ class ImageDataPersistence:
         """
         return self._database.count_items_by_analyser(analyser)
 
-    def delete(self, url: str) -> None:
+    def delete(self, entity: Entity) -> None:
         """
         Removes an entity from the persistence
-        :param url: the image url
+        :param entity: the entity to delete
         """
         try:
-            entities = self._database.find_by_url(url)
-            for entity in entities:
+            entity = self._database.find_by_image_hash(entity.image_hash)
+            if entity is not None:
                 self._image_data_store.put(entity.image_hash, None)
                 self._database.delete(entity.id)
         finally:

@@ -19,7 +19,8 @@ import os
 
 import yaml
 
-from infinitewisdom.config import StringConfigEntry, IntConfigEntry, FloatConfigEntry, BoolConfigEntry, ConfigEntry
+from infinitewisdom.config import StringConfigEntry, IntConfigEntry, FloatConfigEntry, BoolConfigEntry, ConfigEntry, \
+    StringListConfigEntry
 from infinitewisdom.const import ALLOWED_CONFIG_FILE_PATHS, ALLOWED_CONFIG_FILE_EXTENSIONS, CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
     CONFIG_NODE_IMAGE_ANALYSIS, CONFIG_NODE_PERSISTENCE, DEFAULT_SQL_PERSISTENCE_URL, \
@@ -70,6 +71,15 @@ class Config:
             "caption_images_with_text"
         ],
         default=False)
+
+    TELEGRAM_ADMIN_USERNAMES = StringListConfigEntry(
+        yaml_path=[
+            CONFIG_NODE_ROOT,
+            CONFIG_NODE_TELEGRAM,
+            "admin_usernames"
+        ],
+        default=[]
+    )
 
     UPLOADER_INTERVAL = FloatConfigEntry(
         yaml_path=[

@@ -46,7 +46,7 @@ def migrate_entity(entity):
         except:
             print(
                 "d Deleted: '{}'".format(entity.url))
-            p.delete(entity.url)
+            p.delete(entity)
             deleted += 1
             return
 

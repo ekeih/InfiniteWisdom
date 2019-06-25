@@ -77,6 +77,22 @@ def select_best_available_analyser(analysers: [ImageAnalyser], persistence) -> I
         return sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x)))[0]
 
 
+def parse_telegram_command(text: str) -> (str, [str]):
+    """
+    Parses the given message to a command and its arguments
+    :param text: the text to parse
+    :return: the command and its argument list
+    """
+    if text is None or len(text) <= 0:
+        return None, [0]
+
+    if " " not in text:
+        return text[1:], None
+    else:
+        command, rest = text.split(" ", 1)
+        return command[1:], rest
+
+
 def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,
                 caption: str = None) -> int:
     """
@@ -107,11 +123,14 @@ def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data:
     return message.photo[-1].file_id
 
 
-def _send_message(bot: Bot, chat_id: str, message: str):
+def _send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None):
     """
     Sends a text message to the given chat
     :param bot: the bot
     :param chat_id: the chat id to send the message to
     :param message: the message to chat (may contain emoji aliases)
+    :param parse_mode: specify whether to parse the text as markdown or HTML
+    :param reply_to: the message id to reply to
     """
-    bot.send_message(chat_id=chat_id, text=emojize(message, use_aliases=True))
+    emojized_text = emojize(message, use_aliases=True)
+    bot.send_message(chat_id=chat_id, parse_mode=parse_mode, text=emojized_text, reply_to_message_id=reply_to)
