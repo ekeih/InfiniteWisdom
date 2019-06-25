@@ -158,7 +158,7 @@ def requires_image_reply(func):
         raise AttributeError("Unsupported type: {}".format(func))
 
     @functools.wraps(func)
-    def wrapped(self, update: Update, context: CallbackContext, *args, **kwargs):
+    def wrapper(self, update: Update, context: CallbackContext, *args, **kwargs):
         bot = context.bot
         message = update.effective_message
         chat_id = message.chat_id
@@ -179,7 +179,7 @@ def requires_image_reply(func):
         # otherwise call wrapped function as normal
         return func(self, update, context, entity, *args, **kwargs)
 
-    return wrapped
+    return wrapper
 
 
 class InfiniteWisdomBot:
@@ -191,6 +191,8 @@ class InfiniteWisdomBot:
         """
         Creates an instance.
         :param config: configuration object
+        :param persistence: image persistence
+        :param image_analysers: list of image analysers
         """
         self._config = config
         self._persistence = persistence
