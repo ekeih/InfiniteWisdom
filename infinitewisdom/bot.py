@@ -15,30 +15,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import functools
 import logging
-import os
-import sys
 
-parent_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), "..", ".."))
-sys.path.append(parent_dir)
-
-from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
-
-from infinitewisdom.config.config import Config
-from prometheus_client import start_http_server
 from telegram import InlineQueryResultPhoto, ChatAction, Update, InlineQueryResultCachedPhoto, ParseMode
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, \
     ChosenInlineResultHandler, CallbackContext
 
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.analysis.googlevision import GoogleVision
-from infinitewisdom.analysis.microsoftazure import AzureComputerVision
-from infinitewisdom.analysis.tesseract import Tesseract
-from infinitewisdom.analysis.worker import AnalysisWorker
-from infinitewisdom.crawler import Crawler
+from infinitewisdom.config.config import Config
+from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, get_metrics
-from infinitewisdom.uploader import TelegramUploader
 from infinitewisdom.util import _send_photo, _send_message, parse_telegram_command
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -558,36 +545,3 @@ class InfiniteWisdomBot:
                 photo_height=50,
                 photo_width=50
             )
-
-
-if __name__ == '__main__':
-    config = Config()
-
-    persistence = ImageDataPersistence(config)
-
-    image_analysers = []
-    if config.IMAGE_ANALYSIS_TESSERACT_ENABLED.value:
-        image_analysers.append(Tesseract())
-    if config.IMAGE_ANALYSIS_GOOGLE_VISION_ENABLED.value:
-        auth_file = config.IMAGE_ANALYSIS_GOOGLE_VISION_AUTH_FILE.value
-        capacity = config.IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY.value
-        image_analysers.append(GoogleVision(auth_file, capacity))
-    if config.IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED.value:
-        key = config.IMAGE_ANALYSIS_MICROSOFT_AZURE_SUBSCRIPTION_KEY.value
-        region = config.IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION.value
-        capacity = config.IMAGE_ANALYSIS_MICROSOFT_AZURE_CAPACITY.value
-        image_analysers.append(AzureComputerVision(key, region, capacity))
-
-    # start prometheus server
-    start_http_server(config.STATS_PORT.value)
-
-    wisdom_bot = InfiniteWisdomBot(config, persistence, image_analysers)
-    crawler = Crawler(config, persistence, image_analysers)
-    analysis_worker = AnalysisWorker(config, persistence, image_analysers)
-    telegram_uploader = TelegramUploader(config, persistence, wisdom_bot._updater.bot)
-
-    wisdom_bot.start()
-    crawler.start()
-    analysis_worker.start()
-
-    telegram_uploader.start()
