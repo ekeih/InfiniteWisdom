@@ -87,7 +87,7 @@ class Config:
             CONFIG_NODE_UPLOADER,
             CONFIG_NODE_INTERVAL
         ],
-        default=1.0)
+        default=3.0)
 
     UPLOADER_CHAT_ID = StringConfigEntry(
         yaml_path=[
