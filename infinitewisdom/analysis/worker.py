@@ -19,7 +19,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import Config
 from infinitewisdom.persistence import ImageDataPersistence
-from infinitewisdom.util import select_best_available_analyser
+from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -101,4 +101,5 @@ class AnalysisWorker(RegularIntervalWorker):
             "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {}): {}".format(
                 entity.url, analyser.get_identifier(), old_analyser, entity.analyser_quality - old_quality,
                 old_quality,
-                entity.analyser_quality, entity.text))
+                entity.analyser_quality,
+                format_for_single_line_log(entity.text)))

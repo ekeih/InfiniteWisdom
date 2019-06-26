@@ -93,12 +93,13 @@ def parse_telegram_command(text: str) -> (str, [str]):
         return command[1:], rest
 
 
-def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,
-                caption: str = None) -> int:
+def send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,
+               caption: str = None) -> int:
     """
     Sends a photo to the given chat
     :param bot: the bot
     :param chat_id: the chat id to send the image to
+    :param file_id: the telegram file id of the already uploaded image
     :param image_data: the image data
     :param caption: an optional image caption
     :return: telegram image file id
@@ -113,17 +114,35 @@ def _send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data:
         raise ValueError("At least one of file_id and image_data has to be provided!")
 
     if caption is not None:
-        # remove empty lines
-        caption = os.linesep.join([s for s in caption.splitlines() if s.strip()])
-        # limit to 200 characters (telegram api limitation)
-        if len(caption) > TELEGRAM_CAPTION_LENGTH_LIMIT:
-            caption = caption[:197] + "…"
+        caption = _format_caption(caption)
 
     message = bot.send_photo(chat_id=chat_id, photo=photo, caption=caption)
     return message.photo[-1].file_id
 
 
-def _send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None):
+def format_for_single_line_log(text: str) -> str:
+    """
+    Formats a text for log
+    :param text:
+    :return:
+    """
+    return " ".join(text.split())
+
+
+def _format_caption(text: str) -> str or None:
+    if text is None:
+        return None
+
+    # remove empty lines
+    text = os.linesep.join([s for s in text.splitlines() if s.strip()])
+    # limit to 200 characters (telegram api limitation)
+    if len(text) > TELEGRAM_CAPTION_LENGTH_LIMIT:
+        text = text[:197] + "…"
+
+    return text
+
+
+def send_message(bot: Bot, chat_id: str, message: str, parse_mode: str = None, reply_to: int = None):
     """
     Sends a text message to the given chat
     :param bot: the bot
