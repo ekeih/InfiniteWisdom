@@ -225,6 +225,17 @@ InfiniteWisdom:
     interval: 3
 ```
 
+### Stats
+
+`InfiniteWisdom` uses prometheus to expose statistics to the public.
+
+```yaml
+InfiniteWisdom:
+  [...]
+  stats:
+    port: 8000
+```
+
 ## Installation
 
 ### FreeBSD
