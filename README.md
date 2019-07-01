@@ -217,8 +217,12 @@ Create a configuration as described in the section above and start
 the bot using:
 
 ```shell
-python ./infinitewisdom/bot.py
+python ./infinitewisdom/main.py
 ```
+
+It is important that the working directory is set to 
+the root folder of this git for alembic to be able to read 
+database migration files.
 
 ## Attributions
 Many thanks to the authors of [http://inspirobot.me](http://inspirobot.me)
