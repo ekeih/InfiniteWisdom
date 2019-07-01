@@ -11,7 +11,7 @@ InfiniteWisdom:
     caption_images_with_text: True
   uploader:
     # chat_id: "12345678"
-    interval: 1
+    interval: 3
   crawler:
     interval: 1
   persistence:

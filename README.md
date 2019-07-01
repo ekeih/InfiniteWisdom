@@ -98,8 +98,8 @@ InfiniteWisdom:
 
 ### Persistence
 
-The persistence is used to store image url's, image analysis data
-and other meta data related to images.
+The persistence is used to store image data, image analysis data
+and other meta data.
 
 ```yaml
 InfiniteWisdom:
@@ -183,6 +183,27 @@ InfiniteWisdom:
       auth_file: "./googlevision_auth_token.json"
       capacity_per_month: 1000
     [...]
+```
+
+
+### Uploader
+
+By default `InfiniteWisdom` uses the downloaded image data to send 
+images to telegram users. When an image has been sent to a user and 
+was therefore uploaded to telegram servers this uploaded image can be 
+reused for subsequent messages. To speed up the process of uploading images
+to telegram servers this uploader can be used that sends images without 
+telegram image id in the given interval. 
+
+Note that the telegram bot API has a rate limit for sending messages to 
+a chat. Use an interval of at least 3 seconds to prevent problems. 
+
+```yaml
+InfiniteWisdom:
+  [...]
+  uploader:
+    chat_id: "12345678"
+    interval: 3
 ```
 
 ## Installation
