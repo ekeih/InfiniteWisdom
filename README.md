@@ -195,7 +195,7 @@ since some of them can not be installed using `pip`.
 ```bash
 pkg install python36
 pkg install py36-pip
-pkg install py27-sqlite3
+pkg install py36-sqlite3
 
 pip-3.6 install prometheus_client
 pip-3.6 install sqlalchemy
