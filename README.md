@@ -82,6 +82,24 @@ InfiniteWisdom:
     port: 8000
 ```
 
+### Telegram
+
+Provide the required bot token and configure other parameters related
+to the telegram bot side.
+
+```yaml
+InfiniteWisdom:
+  [...]
+  telegram:
+    admin_usernames:
+      - "myadminuser"
+      - "myotheradminuser"
+    bot_token: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+    greeting_message: "Hi there!"
+    inline_badge_size: 16
+    caption_images_with_text: True
+```
+
 ### Crawler
 
 The crawler queries the image api source ([http://inspirobot.me](http://inspirobot.me))
@@ -99,7 +117,8 @@ InfiniteWisdom:
 ### Persistence
 
 The persistence is used to store image data, image analysis data
-and other meta data.
+and other meta data. SQLAlchemy is used so you may use any supported 
+database. Have a look at their [documentation](https://docs.sqlalchemy.org/en/13/core/engines.html#supported-databases).
 
 ```yaml
 InfiniteWisdom:
