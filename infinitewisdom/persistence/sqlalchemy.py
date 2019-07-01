@@ -152,13 +152,14 @@ class SQLAlchemyPersistence:
         with self._session_scope() as session:
             return session.query(Image).order_by(Image.created.desc()).all()
 
+    def add_all(self, entities: [Entity]):
+        entities = list(map(lambda x: self._to_image(x), entities))
+
+        with self._session_scope(True) as session:
+            session.add_all(entities)
+
     def add(self, entity: Entity):
-        image = Image(url=entity.url,
-                      text=entity.text,
-                      analyser=entity.analyser, analyser_quality=entity.analyser_quality,
-                      telegram_file_id=entity.telegram_file_id,
-                      image_hash=entity.image_hash,
-                      created=entity.created)
+        image = self._to_image(entity)
 
         with self._session_scope() as session:
             session.add(image)
@@ -272,3 +273,11 @@ class SQLAlchemyPersistence:
     def count_items_with_image_data(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).filter(Image.image_hash.isnot(None)).count()
+
+    def _to_image(self, entity: Entity) -> Image:
+        return Image(url=entity.url,
+                     text=entity.text,
+                     analyser=entity.analyser, analyser_quality=entity.analyser_quality,
+                     telegram_file_id=entity.telegram_file_id,
+                     image_hash=entity.image_hash,
+                     created=entity.created)

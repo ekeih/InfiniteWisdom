@@ -46,9 +46,11 @@ def respond_on_error(func: callable):
     @functools.wraps(func)
     def wrapper(self, update: Update, context: CallbackContext, *args, **kwargs):
         bot = context.bot
-        message = update.message
-        chat_id = message.chat_id
-        username = update.effective_user.username
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+        username = None
+        if update.effective_user is not None:
+            username = update.effective_user.username
 
         whitelist = self._config.TELEGRAM_ADMIN_USERNAMES.value
 
@@ -58,11 +60,11 @@ def respond_on_error(func: callable):
             import traceback
             exception_text = "\n".join(list(map(lambda x: "{}:{}\n\t{}".format(x.filename, x.lineno, x.line),
                                                 traceback.extract_tb(err.__traceback__))))
-            if username in whitelist:
+            if username is not None and username in whitelist:
                 send_message(bot,
                              chat_id,
-                              ":boom: There was an error running your command:\n\n```\n{}\n```".format(
-                                  exception_text),
+                             ":boom: There was an error running your command:\n\n```\n{}\n```".format(
+                                 exception_text),
                              parse_mode=ParseMode.MARKDOWN,
                              reply_to=message.message_id)
             raise err
@@ -90,7 +92,7 @@ def restricted(func: callable):
         if username is None or username not in whitelist:
             send_message(bot,
                          chat_id,
-                          ":no_entry_sign: You do not have the required permissions to run this command.",
+                         ":no_entry_sign: You do not have the required permissions to run this command.",
                          parse_mode=ParseMode.MARKDOWN,
                          reply_to=message.message_id)
             return
@@ -153,7 +155,7 @@ def requires_image_reply(func):
 
         if reply_to_message.effective_attachment is None:
             send_message(bot, chat_id,
-                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
+                         ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
                          reply_to=message.message_id)
             return
 
@@ -289,14 +291,14 @@ class InfiniteWisdomBot:
         :param context: telegram context
         """
         bot = context.bot
-        message = update.message
-        chat_id = message.chat_id
+        message = update.effective_message
+        chat_id = update.effective_chat.id
         command, argument = parse_telegram_command(message.text)
 
         entity = self._persistence.find_by_image_hash(argument)
         if entity is None:
             send_message(bot, chat_id,
-                          ":exclamation: No entity found for hash: {}".format(argument),
+                         ":exclamation: No entity found for hash: {}".format(argument),
                          reply_to=message.message_id)
             return
 
@@ -304,7 +306,7 @@ class InfiniteWisdomBot:
         entity.analyser_quality = None
         self._persistence.update(entity)
         send_message(bot, chat_id,
-                      ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
+                     ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
                      reply_to=message.message_id)
 
     @restricted
@@ -316,8 +318,8 @@ class InfiniteWisdomBot:
         :param context: telegram context
         """
         bot = context.bot
-        message = update.message
-        chat_id = message.chat_id
+        message = update.effective_message
+        chat_id = update.effective_chat.id
 
         def format_sample(sample):
             result = "  "
@@ -358,7 +360,7 @@ class InfiniteWisdomBot:
         """
         bot = context.bot
         message = update.effective_message
-        chat_id = message.chat_id
+        chat_id = update.effective_chat.id
 
         send_message(bot, chat_id, "{}".format(entity_of_reply),
                      parse_mode=ParseMode.MARKDOWN,
@@ -376,7 +378,7 @@ class InfiniteWisdomBot:
         """
         bot = context.bot
         message = update.effective_message
-        chat_id = message.chat_id
+        chat_id = update.effective_chat.id
         command, args = parse_telegram_command(message.text)
 
         entity_of_reply.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
@@ -384,8 +386,8 @@ class InfiniteWisdomBot:
         entity_of_reply.text = args
         self._persistence.update(entity_of_reply)
         send_message(bot, chat_id,
-                      ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity_of_reply.text,
-                                                                                             entity_of_reply.image_hash),
+                     ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity_of_reply.text,
+                                                                                            entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
     @restricted
@@ -400,7 +402,7 @@ class InfiniteWisdomBot:
         """
         bot = context.bot
         message = update.effective_message
-        chat_id = message.chat_id
+        chat_id = update.effective_chat.id
         is_edit = hasattr(message, 'edited_message') and message.edited_message is not None
 
         if is_edit:
@@ -409,7 +411,7 @@ class InfiniteWisdomBot:
 
         self._persistence.delete(entity_of_reply)
         send_message(bot, chat_id,
-                      "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
+                     "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
     @restricted
@@ -424,14 +426,14 @@ class InfiniteWisdomBot:
         """
         bot = context.bot
         message = update.effective_message
-        chat_id = message.chat_id
+        chat_id = update.effective_chat.id
 
         entity_of_reply.analyser = None
         entity_of_reply.analyser_quality = None
         self._persistence.update(entity_of_reply)
         send_message(bot, chat_id,
-                      ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
-                          entity_of_reply.image_hash),
+                     ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
+                         entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
     @respond_on_error
@@ -442,13 +444,15 @@ class InfiniteWisdomBot:
         :param context: telegram context
         """
         bot = context.bot
-        message = update.message
-        chat_id = message.chat_id
-        from_user = message.from_user
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+        username = "N/A"
+        if update.effective_user is not None:
+            username = update.effective_user.username
         command, args = parse_telegram_command(message.text)
 
-        from_user_is_admin = from_user.username in self._config.TELEGRAM_ADMIN_USERNAMES.value
-        if from_user_is_admin:
+        user_is_admin = username in self._config.TELEGRAM_ADMIN_USERNAMES.value
+        if user_is_admin:
             send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
                          parse_mode=ParseMode.MARKDOWN,
                          reply_to=message.message_id)
@@ -507,7 +511,7 @@ class InfiniteWisdomBot:
         :param context: telegram context
         """
         bot = context.bot
-        chat_id = update.message.chat_id
+        chat_id = update.effective_chat.id
         bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         entity = self._persistence.get_random()
         LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
