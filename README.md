@@ -201,7 +201,7 @@ pip-3.6 install prometheus_client
 pip-3.6 install sqlalchemy
 pip-3.6 install alembic
 pip-3.6 install emoji
-pip-3.6 install pip-3.6 install pyyaml
+pip-3.6 install pyyaml
 pip-3.6 install python-telegram-bot==12.0.0b1
 pip-3.6 install google-cloud-vision
 ```
