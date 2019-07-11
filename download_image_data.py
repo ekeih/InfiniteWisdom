@@ -2,11 +2,11 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 from tqdm import tqdm
 
-from infinitewisdom.config.config import Config
+from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import download_image_bytes, create_hash
 
-config = Config(validate=False)
+config = AppConfig(validate=False)
 config.SQL_PERSISTENCE_URL.value = "postgresql://infinitewisdom:infinitewisdom@localhost/infinitewisdom"
 config.FILE_PERSISTENCE_BASE_PATH.value = "/mnt/sdb1/infinitewisdom"
 p = ImageDataPersistence(config)

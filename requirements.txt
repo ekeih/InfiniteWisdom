@@ -1,7 +1,7 @@
+container-app-conf
 python-telegram-bot==12.0.0b1
 requests
 prometheus-client
-pyyaml
 google-cloud-vision
 pytesseract
 opencv-python

@@ -47,19 +47,6 @@ DEFAULT_FILE_PERSISTENCE_BASE_PATH = "./.image_data"
 
 CONFIG_FILE_NAME = "infinitewisdom"
 
-# the order of this list also defines priority
-ALLOWED_CONFIG_FILE_EXTENSIONS = [
-    "yaml",
-    "yml"
-]
-
-# the order of this list also defines priority
-ALLOWED_CONFIG_FILE_PATHS = [
-    "./",
-    "~/.config/",
-    "~/"
-]
-
 IMAGE_ANALYSIS_TYPE_HUMAN = "human"
 IMAGE_ANALYSIS_TYPE_TESSERACT = "tesseract"
 IMAGE_ANALYSIS_TYPE_GOOGLE_VISION = "google-vision"

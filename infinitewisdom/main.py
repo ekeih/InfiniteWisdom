@@ -31,12 +31,12 @@ if __name__ == '__main__':
     from infinitewisdom.analysis.tesseract import Tesseract
     from infinitewisdom.analysis.worker import AnalysisWorker
     from infinitewisdom.bot import InfiniteWisdomBot
-    from infinitewisdom.config.config import Config
+    from infinitewisdom.config.config import AppConfig
     from infinitewisdom.crawler import Crawler
     from infinitewisdom.persistence import ImageDataPersistence
     from infinitewisdom.uploader import TelegramUploader
 
-    config = Config()
+    config = AppConfig()
 
     persistence = ImageDataPersistence(config)
 
