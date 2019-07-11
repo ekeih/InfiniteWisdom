@@ -50,8 +50,7 @@ class AppConfig(Config):
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
             "bot_token"
-        ],
-        default="")
+        ])
 
     TELEGRAM_INLINE_BADGE_SIZE = IntConfigEntry(
         yaml_path=[
@@ -59,8 +58,7 @@ class AppConfig(Config):
             CONFIG_NODE_TELEGRAM,
             "inline_badge_size"
         ],
-        default=16
-    )
+        default=16)
 
     TELEGRAM_GREETING_MESSAGE = StringConfigEntry(
         yaml_path=[
