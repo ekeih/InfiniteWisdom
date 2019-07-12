@@ -18,7 +18,7 @@ import logging
 from telegram import Bot
 
 from infinitewisdom import RegularIntervalWorker
-from infinitewisdom.config.config import Config
+from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import send_photo
 
@@ -32,7 +32,7 @@ class TelegramUploader(RegularIntervalWorker):
     to use telegram backend for as image hoster.
     """
 
-    def __init__(self, config: Config, persistence: ImageDataPersistence, bot: Bot):
+    def __init__(self, config: AppConfig, persistence: ImageDataPersistence, bot: Bot):
         super().__init__(config.UPLOADER_INTERVAL.value)
         self._persistence = persistence
         self._bot = bot

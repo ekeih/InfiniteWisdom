@@ -21,7 +21,7 @@ from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHan
     ChosenInlineResultHandler, CallbackContext
 
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.config.config import Config
+from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
     REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
 from infinitewisdom.persistence import Entity, ImageDataPersistence
@@ -176,7 +176,7 @@ class InfiniteWisdomBot:
     The main entry class of the InfiniteWisdom telegram bot
     """
 
-    def __init__(self, config: Config, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
+    def __init__(self, config: AppConfig, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
         """
         Creates an instance.
         :param config: configuration object
@@ -191,54 +191,42 @@ class InfiniteWisdomBot:
         LOGGER.debug("Using bot id '{}' ({})".format(self._updater.bot.id, self._updater.bot.name))
 
         self._dispatcher = self._updater.dispatcher
-        self._dispatcher.add_handler(
+
+        handlers = [
             CommandHandler(COMMAND_START,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
-                           callback=self._start_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._start_callback),
             CommandHandler(COMMAND_INSPIRE,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
-                           callback=self._inspire_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._inspire_callback),
             CommandHandler(COMMAND_FORCE_ANALYSIS,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
-                           callback=self._forceanalysis_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._forceanalysis_callback),
             CommandHandler(COMMAND_STATS,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
-                           callback=self._stats_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._stats_callback),
             CommandHandler(REPLY_COMMAND_INFO,
                            filters=Filters.command & Filters.reply & (~ Filters.forwarded),
-                           callback=self._reply_info_command_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._reply_info_command_callback),
             CommandHandler(REPLY_COMMAND_TEXT,
                            filters=Filters.command & Filters.reply & (~ Filters.forwarded),
-                           callback=self._reply_text_command_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._reply_text_command_callback),
             CommandHandler(COMMAND_FORCE_ANALYSIS,
                            filters=Filters.command & Filters.reply & (~ Filters.forwarded),
-                           callback=self._reply_force_analysis_command_callback))
-
-        self._dispatcher.add_handler(
+                           callback=self._reply_force_analysis_command_callback),
             CommandHandler(REPLY_COMMAND_DELETE,
                            filters=Filters.command & Filters.reply & (~ Filters.forwarded),
-                           callback=self._reply_delete_command_callback))
-
-        # unknown command handler
-        self._dispatcher.add_handler(
+                           callback=self._reply_delete_command_callback),
+            # unknown command handler
             MessageHandler(
                 filters=Filters.command & (~ Filters.forwarded),
-                callback=self._unknown_command_callback))
+                callback=self._unknown_command_callback),
+            InlineQueryHandler(self._inline_query_callback),
+            ChosenInlineResultHandler(self._inline_result_chosen_callback)
+        ]
 
-        self._dispatcher.add_handler(InlineQueryHandler(self._inline_query_callback))
-        self._dispatcher.add_handler(ChosenInlineResultHandler(self._inline_result_chosen_callback))
+        for handler in handlers:
+            self._updater.dispatcher.add_handler(handler)
 
     @property
     def bot(self):

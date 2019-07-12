@@ -20,7 +20,7 @@ import requests
 
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.config.config import Config
+from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence, Entity
 from infinitewisdom.util import download_image_bytes, create_hash
 
@@ -33,7 +33,7 @@ class Crawler(RegularIntervalWorker):
     Crawler used to fetch new images from the image API
     """
 
-    def __init__(self, config: Config, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
+    def __init__(self, config: AppConfig, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
         """
         Creates a crawler instance.
         :param persistence: crawled data is added here

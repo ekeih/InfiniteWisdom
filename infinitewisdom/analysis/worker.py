@@ -17,7 +17,7 @@ import logging
 
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.config.config import Config
+from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log
 
@@ -30,7 +30,7 @@ class AnalysisWorker(RegularIntervalWorker):
     Worker that continuously scans the persistence and tries to add or upgrade their analysis.
     """
 
-    def __init__(self, config: Config, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
+    def __init__(self, config: AppConfig, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
         """
         Creates an instance
         :param config: the configuration
