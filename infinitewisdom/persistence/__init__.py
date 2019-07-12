@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 
-from infinitewisdom.config.config import Config
+from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     IMAGE_ANALYSIS_TYPE_AZURE, IMAGE_ANALYSIS_TYPE_HUMAN
 from infinitewisdom.persistence.image_persistence import ImageDataStore
@@ -33,7 +33,7 @@ class ImageDataPersistence:
     Persistence main class
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: AppConfig):
         self._config = config
 
         self._database = SQLAlchemyPersistence(config.SQL_PERSISTENCE_URL.value)
