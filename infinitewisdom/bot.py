@@ -25,7 +25,7 @@ from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
     REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
 from infinitewisdom.persistence import Entity, ImageDataPersistence
-from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, get_metrics
+from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message, parse_telegram_command
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -309,30 +309,7 @@ class InfiniteWisdomBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        def format_sample(sample):
-            result = "  "
-            if len(sample[0]) > 0:
-                result += str(sample[0])
-            if len(sample[1]) > 0:
-                result += str(sample[1])
-
-            if len(result) > 0:
-                result += " "
-            result += str(sample[2])
-
-            return result
-
-        def format_samples(samples):
-            return "\n".join(list(map(format_sample, samples)))
-
-        def format_metric(metric):
-            name = metric._name
-            samples = list(metric._samples())
-            samples_text = format_samples(samples)
-
-            return "{}:\n{}".format(name, samples_text)
-
-        text = "\n\n".join(map(format_metric, get_metrics()))
+        text = format_metrics()
 
         send_message(bot, chat_id, text, reply_to=message.message_id)
 
