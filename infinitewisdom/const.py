@@ -21,6 +21,7 @@ Holds important constants
 TELEGRAM_CAPTION_LENGTH_LIMIT = 200
 
 COMMAND_START = 'start'
+COMMAND_COMMANDS = 'commands'
 COMMAND_INSPIRE = 'inspire'
 COMMAND_FORCE_ANALYSIS = 'forceanalysis'
 COMMAND_STATS = 'stats'

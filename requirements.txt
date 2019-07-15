@@ -1,5 +1,6 @@
 container-app-conf==1.0.0
 python-telegram-bot==12.0.0b1
+telegram-click==2.1.0
 requests
 prometheus-client
 google-cloud-vision

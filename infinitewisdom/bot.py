@@ -19,11 +19,14 @@ import logging
 from telegram import InlineQueryResultPhoto, ChatAction, Update, InlineQueryResultCachedPhoto, ParseMode
 from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater, \
     ChosenInlineResultHandler, CallbackContext
+from telegram_click.argument import Argument
+from telegram_click.decorator import command
+from telegram_click.permission.base import Permission
 
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_COMMANDS
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message, parse_telegram_command
@@ -31,45 +34,6 @@ from infinitewisdom.util import send_photo, send_message, parse_telegram_command
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
-
-
-def respond_on_error(func: callable):
-    """
-    Decorator that wraps functions and responds with an error message to the user if an error occurs.
-    Note that this decorator should be applied after the ```restricted``` decorator to prevent leaking error messages.
-    :return: the decorated method
-    """
-
-    if not callable(func):
-        raise AttributeError("Unsupported type: {}".format(func))
-
-    @functools.wraps(func)
-    def wrapper(self, update: Update, context: CallbackContext, *args, **kwargs):
-        bot = context.bot
-        message = update.effective_message
-        chat_id = update.effective_chat.id
-        username = None
-        if update.effective_user is not None:
-            username = update.effective_user.username
-
-        whitelist = self._config.TELEGRAM_ADMIN_USERNAMES.value
-
-        try:
-            return func(self, update, context, *args, **kwargs)
-        except Exception as err:
-            import traceback
-            exception_text = "\n".join(list(map(lambda x: "{}:{}\n\t{}".format(x.filename, x.lineno, x.line),
-                                                traceback.extract_tb(err.__traceback__))))
-            if username is not None and username in whitelist:
-                send_message(bot,
-                             chat_id,
-                             ":boom: There was an error running your command:\n\n```\n{}\n```".format(
-                                 exception_text),
-                             parse_mode=ParseMode.MARKDOWN,
-                             reply_to=message.message_id)
-            raise err
-
-    return wrapper
 
 
 def restricted(func: callable):
@@ -171,6 +135,19 @@ def requires_image_reply(func):
     return wrapper
 
 
+class _ConfigAdmins(Permission):
+
+    def __init__(self):
+        self._config = AppConfig()
+
+    def evaluate(self, update: Update, context: CallbackContext) -> bool:
+        from_user = update.effective_message.from_user
+        return from_user.username in self._config.TELEGRAM_ADMIN_USERNAMES.value
+
+
+CONFIG_ADMINS = _ConfigAdmins()
+
+
 class InfiniteWisdomBot:
     """
     The main entry class of the InfiniteWisdom telegram bot
@@ -206,16 +183,16 @@ class InfiniteWisdomBot:
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
                            callback=self._stats_callback),
             CommandHandler(REPLY_COMMAND_INFO,
-                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_info_command_callback),
             CommandHandler(REPLY_COMMAND_TEXT,
-                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_text_command_callback),
             CommandHandler(COMMAND_FORCE_ANALYSIS,
-                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_force_analysis_command_callback),
             CommandHandler(REPLY_COMMAND_DELETE,
-                           filters=Filters.command & Filters.reply & (~ Filters.forwarded),
+                           filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_delete_command_callback),
             # unknown command handler
             MessageHandler(
@@ -258,7 +235,10 @@ class InfiniteWisdomBot:
         if greeting_message is not None and len(greeting_message) > 0:
             send_message(bot=bot, chat_id=update.message.chat_id, message=greeting_message)
 
-    @respond_on_error
+    @command(
+        name=COMMAND_INSPIRE,
+        description="Get inspired by a random quote of infinite wisdom."
+    )
     @INSPIRE_TIME.time()
     def _inspire_callback(self, update: Update, context: CallbackContext) -> None:
         """
@@ -268,11 +248,19 @@ class InfiniteWisdomBot:
         """
         self._send_random_quote(update, context)
 
-    @restricted
-    @respond_on_error
-    @requires_command_argument(
-        error_message=":exclamation: You have to provide the image hash as an argument to the command.")
-    def _forceanalysis_callback(self, update: Update, context: CallbackContext) -> None:
+    @command(
+        name=COMMAND_FORCE_ANALYSIS,
+        description="Force a reset of the existing image analysis data of the given image.",
+        arguments=[
+            Argument(
+                name="image_hash",
+                description="The hash of the image to reset.",
+                example="d41d8cd98f00b204e9800998ecf8427e"
+            )
+        ],
+        permissions=CONFIG_ADMINS
+    )
+    def _forceanalysis_callback(self, update: Update, context: CallbackContext, image_hash: str) -> None:
         """
         /forceanalysis command handler (with an argument)
         :param update: the chat update object
@@ -281,12 +269,11 @@ class InfiniteWisdomBot:
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
-        command, argument = parse_telegram_command(message.text)
 
-        entity = self._persistence.find_by_image_hash(argument)
+        entity = self._persistence.find_by_image_hash(image_hash)
         if entity is None:
             send_message(bot, chat_id,
-                         ":exclamation: No entity found for hash: {}".format(argument),
+                         ":exclamation: No entity found for hash: {}".format(image_hash),
                          reply_to=message.message_id)
             return
 
@@ -297,8 +284,11 @@ class InfiniteWisdomBot:
                      ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
                      reply_to=message.message_id)
 
-    @restricted
-    @respond_on_error
+    @command(
+        name=COMMAND_STATS,
+        description="List statistics of this bot.",
+        permissions=CONFIG_ADMINS
+    )
     def _stats_callback(self, update: Update, context: CallbackContext) -> None:
         """
         /stats command handler
@@ -313,8 +303,11 @@ class InfiniteWisdomBot:
 
         send_message(bot, chat_id, text, reply_to=message.message_id)
 
-    @restricted
-    @respond_on_error
+    @command(
+        name=REPLY_COMMAND_INFO,
+        description="Show information of the image that is referenced via message reply.",
+        permissions=CONFIG_ADMINS
+    )
     @requires_image_reply
     def _reply_info_command_callback(self, update: Update, context: CallbackContext,
                                      entity_of_reply: Entity or None) -> None:
@@ -331,11 +324,23 @@ class InfiniteWisdomBot:
                      parse_mode=ParseMode.MARKDOWN,
                      reply_to=message.message_id)
 
-    @restricted
-    @respond_on_error
+    @command(
+        name=REPLY_COMMAND_TEXT,
+        description="Set the text of the image that is referenced via message reply.",
+        arguments=[
+            Argument(
+                name="text",
+                description="The text to set.",
+                # TODO: this requires quoted arguments
+                example="This is a very inspirational quote.",
+                validator=lambda x: x and x.strip()
+            )
+        ],
+        permissions=CONFIG_ADMINS
+    )
     @requires_image_reply
     def _reply_text_command_callback(self, update: Update, context: CallbackContext,
-                                     entity_of_reply: Entity or None) -> None:
+                                     entity_of_reply: Entity or None, text: str) -> None:
         """
         /text reply command handler
         :param update: the chat update object
@@ -344,19 +349,21 @@ class InfiniteWisdomBot:
         bot = context.bot
         message = update.effective_message
         chat_id = update.effective_chat.id
-        command, args = parse_telegram_command(message.text)
 
         entity_of_reply.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
         entity_of_reply.analyser_quality = 1.0
-        entity_of_reply.text = args
+        entity_of_reply.text = text
         self._persistence.update(entity_of_reply)
         send_message(bot, chat_id,
                      ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity_of_reply.text,
                                                                                             entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
-    @restricted
-    @respond_on_error
+    @command(
+        name=REPLY_COMMAND_DELETE,
+        description="Delete the image that is referenced via message reply.",
+        permissions=CONFIG_ADMINS
+    )
     @requires_image_reply
     def _reply_delete_command_callback(self, update: Update, context: CallbackContext,
                                        entity_of_reply: Entity or None) -> None:
@@ -379,8 +386,12 @@ class InfiniteWisdomBot:
                      "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
-    @restricted
-    @respond_on_error
+    @command(
+        name=COMMAND_FORCE_ANALYSIS,
+        description="Force a reset of the existing image analysis data "
+                    "of the image that is referenced via message reply.",
+        permissions=CONFIG_ADMINS
+    )
     @requires_image_reply
     def _reply_force_analysis_command_callback(self, update: Update, context: CallbackContext,
                                                entity_of_reply: Entity or None) -> None:
@@ -401,7 +412,10 @@ class InfiniteWisdomBot:
                          entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
-    @respond_on_error
+    @command(
+        name=COMMAND_COMMANDS,
+        description="List commands supported by this bot.",
+    )
     def _unknown_command_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Handles unknown commands send by a user
