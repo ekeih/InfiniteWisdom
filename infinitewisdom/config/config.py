@@ -21,7 +21,7 @@ from container_app_conf import Config
 from container_app_conf.entry.bool import BoolConfigEntry
 from container_app_conf.entry.float import FloatConfigEntry
 from container_app_conf.entry.int import IntConfigEntry
-from container_app_conf.entry.list import StringListConfigEntry
+from container_app_conf.entry.list import ListConfigEntry
 from container_app_conf.entry.string import StringConfigEntry
 
 from infinitewisdom.const import CONFIG_FILE_NAME, \
@@ -77,7 +77,8 @@ class AppConfig(Config):
         ],
         default=False)
 
-    TELEGRAM_ADMIN_USERNAMES = StringListConfigEntry(
+    TELEGRAM_ADMIN_USERNAMES = ListConfigEntry(
+        item_type=StringConfigEntry,
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
