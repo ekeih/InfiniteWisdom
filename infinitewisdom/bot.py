@@ -266,7 +266,6 @@ class InfiniteWisdomBot:
             Argument(
                 name="text",
                 description="The text to set.",
-                # TODO: this requires quoted arguments
                 example="This is a very inspirational quote.",
                 validator=lambda x: x and x.strip()
             )
