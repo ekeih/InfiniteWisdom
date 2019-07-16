@@ -52,7 +52,9 @@ def requires_image_reply(func):
         chat_id = message.chat_id
         reply_to_message = message.reply_to_message
 
-        if reply_to_message.effective_attachment is None:
+        if (reply_to_message.from_user is None
+                or reply_to_message.from_user.id != bot.id
+                or reply_to_message.effective_attachment is None):
             send_message(bot, chat_id,
                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
                          reply_to=message.message_id)
