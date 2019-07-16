@@ -26,7 +26,7 @@ from telegram_click.permission.base import Permission
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_COMMANDS
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message, parse_telegram_command
@@ -346,10 +346,10 @@ class InfiniteWisdomBot:
                          entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
-    @command(
-        name=COMMAND_COMMANDS,
-        description="List commands supported by this bot.",
-    )
+    # @command(
+    #     name=COMMAND_COMMANDS,
+    #     description="List commands supported by this bot.",
+    # )
     def _unknown_command_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Handles unknown commands send by a user
