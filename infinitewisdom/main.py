@@ -61,8 +61,8 @@ if __name__ == '__main__':
     analysis_worker = AnalysisWorker(config, persistence, image_analysers)
     telegram_uploader = TelegramUploader(config, persistence, wisdom_bot._updater.bot)
 
-    wisdom_bot.start()
     crawler.start()
     analysis_worker.start()
-
     telegram_uploader.start()
+
+    wisdom_bot.start()
