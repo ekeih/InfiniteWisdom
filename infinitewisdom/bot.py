@@ -152,6 +152,7 @@ class InfiniteWisdomBot:
         This means filling the url pool and listening for messages.
         """
         self._updater.start_polling()
+        self._updater.idle()
 
     def stop(self):
         """

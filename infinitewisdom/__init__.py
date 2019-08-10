@@ -33,7 +33,10 @@ class RegularIntervalWorker:
         """
         Starts the worker
         """
-        self._schedule_next_run()
+        if self._timer is None:
+            self._schedule_next_run()
+        else:
+            LOGGER.debug("Already running, ignoring start() call")
 
     def stop(self):
         """
