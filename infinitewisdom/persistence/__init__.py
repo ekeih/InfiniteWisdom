@@ -178,7 +178,7 @@ class ImageDataPersistence:
         :param analyser: analyser to check
         :return: number of items
         """
-        return self._database.count_items_by_analyser(analyser)
+        return self._database.count_items_this_month(analyser)
 
     def delete(self, entity: Entity) -> None:
         """
