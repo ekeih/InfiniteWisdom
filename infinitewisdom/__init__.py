@@ -60,7 +60,7 @@ class RegularIntervalWorker:
         try:
             self._run()
         except Exception as e:
-            LOGGER.error(e)
+            LOGGER.error(e, exc_info=True)
         finally:
             self._schedule_next_run()
 
