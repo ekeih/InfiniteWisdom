@@ -18,9 +18,9 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 
@@ -37,13 +37,13 @@ class Entity:
 
     def __init__(self, url: str, created: float, text: str or None = None, analyser: str or None = None,
                  analyser_quality: float or None = None, image_hash: str or None = None,
-                 telegram_file_id: str or None = None):
+                 telegram_file_ids: [str] or None = None):
         self.url = url
         self.text = text
         self.analyser = analyser
         self._analyser_quality = analyser_quality
         self.created = created
-        self._telegram_file_id = telegram_file_id
+        self._telegram_file_ids = telegram_file_ids
         self._image_hash = image_hash
 
     def __str__(self):
@@ -55,7 +55,7 @@ class Entity:
                "Analyser quality: `{}`\n" \
                "Text: `{}`".format(datetime.fromtimestamp(self.created),
                                    self.url,
-                                   self.telegram_file_id,
+                                   self.telegram_file_ids,
                                    self.image_hash,
                                    self.analyser,
                                    self.analyser_quality,
@@ -66,12 +66,12 @@ class Entity:
         return self.__dict__.get('id', None)
 
     @property
-    def telegram_file_id(self):
-        return self.__dict__.get('telegram_file_id', None)
+    def telegram_file_ids(self):
+        return self.__dict__.get('telegram_file_ids', None)
 
-    @telegram_file_id.setter
-    def telegram_file_id(self, value):
-        self._telegram_file_id = value
+    @telegram_file_ids.setter
+    def telegram_file_ids(self, value):
+        self._telegram_file_ids = value
 
     @property
     def analyser_quality(self):
@@ -103,8 +103,19 @@ class Image(Base, Entity):
     analyser = Column(String)
     analyser_quality = Column(Float)
     created = Column(Float)
-    telegram_file_id = Column(String, index=True)
     image_hash = Column(String, index=True)
+    telegram_file_ids = relationship("TelegramFileId", back_populates="image")
+
+
+class TelegramFileId(Base):
+    """
+    Data model of a telegram file id
+    """
+    __tablename__ = 'telegram_file_ids'
+
+    id = Column(String, primary_key=True)
+    image_id = Column(Integer, ForeignKey('images.id'))
+    image = relationship("Image", back_populates="telegram_file_ids")
 
 
 class SQLAlchemyPersistence:
@@ -230,7 +241,7 @@ class SQLAlchemyPersistence:
     def find_not_uploaded(self) -> Entity or None:
         with self._session_scope() as session:
             return session.query(Image).filter(
-                and_(Image.telegram_file_id.is_(None),
+                and_(~Image.telegram_file_ids.any(),
                      Image.image_hash.isnot(None))).order_by(Image.created).first()
 
     def count(self) -> int:
@@ -240,7 +251,7 @@ class SQLAlchemyPersistence:
     def update(self, entity: Entity) -> None:
         with self._session_scope(write=True) as session:
             old = session.query(Image).with_for_update().filter_by(id=entity.id).first()
-            old.telegram_file_id = entity.telegram_file_id
+            old.telegram_file_ids = entity.telegram_file_ids
             old.analyser = entity.analyser
             old.analyser_quality = entity.analyser_quality
             old.text = entity.text
@@ -260,7 +271,7 @@ class SQLAlchemyPersistence:
 
     def count_items_with_telegram_upload(self) -> int:
         with self._session_scope() as session:
-            return session.query(Image).filter(Image.telegram_file_id.isnot(None)).count()
+            return session.query(Image).filter(Image.telegram_file_ids.any()).count()
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         with self._session_scope() as session:
