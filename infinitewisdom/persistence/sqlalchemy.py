@@ -18,7 +18,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -194,8 +194,23 @@ class SQLAlchemyPersistence:
         words = text.split(" ")
 
         with self._session_scope() as session:
-            filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
-            return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
+            exact_word_filters = list(map(lambda word: Image.text.ilike("% {} %".format(word)), words))
+            exact_word_and_filters = and_(*exact_word_filters)
+            exact_word_or_filters = or_(*exact_word_filters)
+            contains_filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
+            contains_and_filters = and_(*contains_filters)
+            contains_or_filters = or_(*contains_filters)
+            return session.query(Image).filter(
+                or_(exact_word_and_filters,
+                    exact_word_or_filters,
+                    contains_and_filters,
+                    contains_or_filters)
+            ).order_by(
+                exact_word_and_filters == False,
+                exact_word_or_filters == False,
+                contains_and_filters == False,
+                contains_or_filters == False
+            ).limit(limit).offset(offset).all()
 
     def find_all_non_optimal(self, target_quality: int, limit: int = None) -> [Entity]:
         if limit is None:
@@ -256,7 +271,8 @@ class SQLAlchemyPersistence:
             session.query(Image).filter_by(id=entity_id).delete()
 
     def clear(self) -> None:
-        raise NotImplementedError()
+        with self._session_scope(write=True) as session:
+            session.query(Image).delete()
 
     def count_items_with_telegram_upload(self) -> int:
         with self._session_scope() as session:
