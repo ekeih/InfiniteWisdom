@@ -257,6 +257,13 @@ pip-3.6 install python-telegram-bot==12.0.0b1
 pip-3.6 install google-cloud-vision
 ```
 
+For **Tesseract** support add
+```bash
+pkg install py36-pillow
+pkg install opencv
+pip-3.6 install pytesseract
+```
+
 For **PostgreSQL** support add
 ```bash
 pkg install py36-psycopg2
