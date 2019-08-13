@@ -17,6 +17,9 @@
 from prometheus_client import Gauge, Counter, Summary
 from prometheus_client.metrics import MetricWrapperBase
 
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, IMAGE_ANALYSIS_TYPE_AZURE, \
+    IMAGE_ANALYSIS_TYPE_TESSERACT
+
 POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
 TELEGRAM_ENTITIES_COUNT = Gauge('telegram_entities_count',
                                 'Number of items that have been uploaded to telegram servers')
@@ -29,9 +32,24 @@ IMAGE_ANALYSIS_HAS_TEXT_COUNT = Gauge('image_analysis_has_text_count',
                                       'Number of entities that have a text')
 START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
-REPLY_TIME = Summary('reply_processing_seconds', 'Time spent in the reply message handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 CHOSEN_INLINE_RESULTS = Counter('chosen_inline_results', 'Amount of inline results that were chosen by a user')
+
+REGULAR_INTERVAL_WORKER_TIME = Summary('regular_interval_worker_processing_seconds',
+                                       'Time spent for a single run cycle of this workercrawler run cycle',
+                                       ['name'])
+
+CRAWLER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="crawler")
+UPLOADER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="uploader")
+ANALYSER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="analyser")
+
+ANALYSER_FIND_TEXT_TIME = Summary('analyser_find_text_processing_seconds',
+                                  'Time spent to find text for a given image',
+                                  ['name'])
+
+GOOGLE_VISION_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_GOOGLE_VISION)
+MICROSOFT_AZURE_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_AZURE)
+TESSERACT_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_TESSERACT)
 
 
 def get_metrics() -> []:

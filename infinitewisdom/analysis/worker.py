@@ -19,6 +19,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
+from infinitewisdom.stats import ANALYSER_TIME
 from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log
 
 LOGGER = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ class AnalysisWorker(RegularIntervalWorker):
 
         super().start()
 
+    @ANALYSER_TIME.time()
     def _run(self):
         """
         The job that is executed regularly by this crawler
