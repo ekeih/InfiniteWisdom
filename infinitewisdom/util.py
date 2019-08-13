@@ -36,7 +36,6 @@ def download_image_bytes(url: str) -> bytes:
     """
     image = requests.get(url)
     image.raise_for_status()
-    LOGGER.debug('Fetched image from: {}'.format(url))
     return image.content
 
 
