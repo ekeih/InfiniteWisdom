@@ -17,6 +17,7 @@
 import requests
 
 from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.stats import MICROSOFT_AZURE_FIND_TEXT_TIME
 
 
 class AzureComputerVision(ImageAnalyser):
@@ -51,6 +52,7 @@ class AzureComputerVision(ImageAnalyser):
     def get_monthly_capacity(self) -> float:
         return self._monthly_capacity
 
+    @MICROSOFT_AZURE_FIND_TEXT_TIME.time()
     def find_text(self, image: bytes):
         headers = {
             'Content-Type': 'application/octet-stream',  # this is necessary for binary image data upload

@@ -17,6 +17,9 @@
 from prometheus_client import Gauge, Counter, Summary
 from prometheus_client.metrics import MetricWrapperBase
 
+from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, IMAGE_ANALYSIS_TYPE_AZURE, \
+    IMAGE_ANALYSIS_TYPE_TESSERACT
+
 POOL_SIZE = Gauge('pool_size', 'Size of the URL pool')
 TELEGRAM_ENTITIES_COUNT = Gauge('telegram_entities_count',
                                 'Number of items that have been uploaded to telegram servers')
@@ -39,6 +42,14 @@ REGULAR_INTERVAL_WORKER_TIME = Summary('regular_interval_worker_processing_secon
 CRAWLER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="crawler")
 UPLOADER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="uploader")
 ANALYSER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="analyser")
+
+ANALYSER_FIND_TEXT_TIME = Summary('analyser_find_text_processing_seconds',
+                                  'Time spent to find text for a given image',
+                                  ['name'])
+
+GOOGLE_VISION_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_GOOGLE_VISION)
+MICROSOFT_AZURE_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_AZURE)
+TESSERACT_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_TESSERACT)
 
 
 def get_metrics() -> []:

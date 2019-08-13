@@ -17,6 +17,7 @@ import logging
 import math
 
 from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.stats import TESSERACT_FIND_TEXT_TIME
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -37,6 +38,7 @@ class Tesseract(ImageAnalyser):
     def get_monthly_capacity(self):
         return math.inf
 
+    @TESSERACT_FIND_TEXT_TIME.time()
     def find_text(self, image: bytes):
         try:
             from PIL import Image

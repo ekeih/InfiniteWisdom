@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.stats import GOOGLE_VISION_FIND_TEXT_TIME
 
 
 class GoogleVision(ImageAnalyser):
@@ -50,6 +51,7 @@ class GoogleVision(ImageAnalyser):
     def get_monthly_capacity(self) -> float:
         return self._monthly_capacity
 
+    @GOOGLE_VISION_FIND_TEXT_TIME.time()
     def find_text(self, image: bytes):
         from google.cloud.vision import types
 
