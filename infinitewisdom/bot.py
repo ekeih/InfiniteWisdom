@@ -26,7 +26,7 @@ from telegram_click.permission.base import Permission
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION
 from infinitewisdom.persistence import Entity, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message, parse_telegram_command
@@ -131,6 +131,9 @@ class InfiniteWisdomBot:
             CommandHandler(REPLY_COMMAND_DELETE,
                            filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_delete_command_callback),
+            CommandHandler(COMMAND_VERSION,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._version_command_callback),
             # unknown command handler
             MessageHandler(
                 filters=Filters.command & (~ Filters.forwarded),
@@ -239,6 +242,25 @@ class InfiniteWisdomBot:
 
         text = format_metrics()
 
+        send_message(bot, chat_id, text, reply_to=message.message_id)
+
+    @command(
+        name=COMMAND_VERSION,
+        description="Show the version of this bot.",
+        permissions=CONFIG_ADMINS
+    )
+    def _version_command_callback(self, update: Update, context: CallbackContext) -> None:
+        """
+        /stats command handler
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        from infinitewisdom.const import __version__
+        text = "{}".format(__version__)
         send_message(bot, chat_id, text, reply_to=message.message_id)
 
     @command(
