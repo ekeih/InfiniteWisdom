@@ -20,6 +20,7 @@ from telegram import Bot
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
+from infinitewisdom.stats import UPLOADER_TIME
 from infinitewisdom.util import send_photo
 
 LOGGER = logging.getLogger(__name__)
@@ -44,6 +45,7 @@ class TelegramUploader(RegularIntervalWorker):
             return
         super().start()
 
+    @UPLOADER_TIME.time()
     def _run(self):
         entity = self._persistence.find_not_uploaded()
         if entity is None:

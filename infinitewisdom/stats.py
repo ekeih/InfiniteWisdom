@@ -29,9 +29,16 @@ IMAGE_ANALYSIS_HAS_TEXT_COUNT = Gauge('image_analysis_has_text_count',
                                       'Number of entities that have a text')
 START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
-REPLY_TIME = Summary('reply_processing_seconds', 'Time spent in the reply message handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')
 CHOSEN_INLINE_RESULTS = Counter('chosen_inline_results', 'Amount of inline results that were chosen by a user')
+
+REGULAR_INTERVAL_WORKER_TIME = Summary('regular_interval_worker_processing_seconds',
+                                       'Time spent for a single run cycle of this workercrawler run cycle',
+                                       ['name'])
+
+CRAWLER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="crawler")
+UPLOADER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="uploader")
+ANALYSER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="analyser")
 
 
 def get_metrics() -> []:

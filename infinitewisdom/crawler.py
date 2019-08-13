@@ -22,6 +22,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence, Entity
+from infinitewisdom.stats import CRAWLER_TIME
 from infinitewisdom.util import download_image_bytes, create_hash
 
 LOGGER = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ class Crawler(RegularIntervalWorker):
         self._persistence = persistence
         self._image_analysers = image_analysers
 
+    @CRAWLER_TIME.time()
     def _run(self):
         self._add_image_url_to_pool()
 
