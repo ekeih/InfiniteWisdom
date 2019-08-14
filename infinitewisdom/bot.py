@@ -27,7 +27,7 @@ from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
     REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION
-from infinitewisdom.persistence import Entity, ImageDataPersistence
+from infinitewisdom.persistence import Image, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message, parse_telegram_command
 
@@ -61,10 +61,11 @@ def requires_image_reply(func):
             return
 
         reply_to_message = message.reply_to_message
-        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
-                           None)
-        telegram_file_id = reply_image.file_id
-        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+        for attachment in reply_to_message.effective_attachment:
+            telegram_file_id = attachment.file_id
+            entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+            if entity is not None:
+                break
 
         # otherwise call wrapped function as normal
         return func(self, update, context, entity, *args, **kwargs)
@@ -270,7 +271,7 @@ class InfiniteWisdomBot:
     )
     @requires_image_reply
     def _reply_info_command_callback(self, update: Update, context: CallbackContext,
-                                     entity_of_reply: Entity or None) -> None:
+                                     entity_of_reply: Image or None) -> None:
         """
         /info reply command handler
         :param update: the chat update object
@@ -299,7 +300,7 @@ class InfiniteWisdomBot:
     )
     @requires_image_reply
     def _reply_text_command_callback(self, update: Update, context: CallbackContext,
-                                     entity_of_reply: Entity or None, text: str) -> None:
+                                     entity_of_reply: Image or None, text: str) -> None:
         """
         /text reply command handler
         :param update: the chat update object
@@ -325,7 +326,7 @@ class InfiniteWisdomBot:
     )
     @requires_image_reply
     def _reply_delete_command_callback(self, update: Update, context: CallbackContext,
-                                       entity_of_reply: Entity or None) -> None:
+                                       entity_of_reply: Image or None) -> None:
         """
         /text reply command handler
         :param update: the chat update object
@@ -353,7 +354,7 @@ class InfiniteWisdomBot:
     )
     @requires_image_reply
     def _reply_force_analysis_command_callback(self, update: Update, context: CallbackContext,
-                                               entity_of_reply: Entity or None) -> None:
+                                               entity_of_reply: Image or None) -> None:
         """
         /forceanalysis reply command handler
         :param update: the chat update object
@@ -458,26 +459,30 @@ class InfiniteWisdomBot:
         if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
             caption = entity.text
 
-        if entity.telegram_file_id is not None:
-            send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_id, caption=caption)
+        if len(entity.telegram_file_ids) > 0:
+            file_ids = send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_ids[0].id, caption=caption)
+            for file_id in file_ids:
+                entity.add_file_id(file_id)
+            self._persistence.update(entity)
             return
 
         image_bytes = self._persistence._image_data_store.get(entity.image_hash)
-        file_id = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
-        entity.telegram_file_id = file_id
+        file_ids = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+        for file_id in file_ids:
+            entity.add_file_id(file_id)
         self._persistence.update(entity, image_bytes)
 
     @staticmethod
-    def _entity_to_inline_query_result(entity: Entity):
+    def _entity_to_inline_query_result(entity: Image):
         """
         Creates a telegram inline query result object for the given entity
         :param entity: the entity to use
         :return: inline result object
         """
-        if entity.telegram_file_id is not None:
+        if len(entity.telegram_file_ids) > 0:
             return InlineQueryResultCachedPhoto(
                 id=entity.image_hash,
-                photo_file_id=str(entity.telegram_file_id),
+                photo_file_id=str(entity.telegram_file_ids[0].id),
             )
         else:
             return InlineQueryResultPhoto(

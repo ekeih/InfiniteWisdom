@@ -18,9 +18,9 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 
@@ -30,67 +30,7 @@ LOGGER.setLevel(logging.DEBUG)
 Base = declarative_base()
 
 
-class Entity:
-    """
-    Persistence entity
-    """
-
-    def __init__(self, url: str, created: float, text: str or None = None, analyser: str or None = None,
-                 analyser_quality: float or None = None, image_hash: str or None = None,
-                 telegram_file_id: str or None = None):
-        self.url = url
-        self.text = text
-        self.analyser = analyser
-        self._analyser_quality = analyser_quality
-        self.created = created
-        self._telegram_file_id = telegram_file_id
-        self._image_hash = image_hash
-
-    def __str__(self):
-        return "Created: `{}`\n" \
-               "URL: {}\n" \
-               "Telegram file id: `{}`\n" \
-               "Hash: `{}`\n" \
-               "Analyser: `{}`\n" \
-               "Analyser quality: `{}`\n" \
-               "Text: `{}`".format(datetime.fromtimestamp(self.created),
-                                   self.url,
-                                   self.telegram_file_id,
-                                   self.image_hash,
-                                   self.analyser,
-                                   self.analyser_quality,
-                                   self.text)
-
-    @property
-    def id(self):
-        return self.__dict__.get('id', None)
-
-    @property
-    def telegram_file_id(self):
-        return self.__dict__.get('telegram_file_id', None)
-
-    @telegram_file_id.setter
-    def telegram_file_id(self, value):
-        self._telegram_file_id = value
-
-    @property
-    def analyser_quality(self):
-        return self.__dict__.get('analyser_quality', None)
-
-    @analyser_quality.setter
-    def analyser_quality(self, value):
-        self._analyser_quality = value
-
-    @property
-    def image_hash(self):
-        return self.__dict__.get('image_hash', None)
-
-    @image_hash.setter
-    def image_hash(self, value):
-        self._image_hash = value
-
-
-class Image(Base, Entity):
+class Image(Base):
     """
     Data model of a single quote
     """
@@ -103,8 +43,44 @@ class Image(Base, Entity):
     analyser = Column(String)
     analyser_quality = Column(Float)
     created = Column(Float)
-    telegram_file_id = Column(String, index=True)
     image_hash = Column(String, index=True)
+    telegram_file_ids = relationship("TelegramFileId",
+                                     back_populates="image",
+                                     single_parent=True,
+                                     cascade="all, delete-orphan",
+                                     lazy="joined")
+
+    def __str__(self):
+        return "Created: `{}`\n" \
+               "URL: {}\n" \
+               "Telegram file ids: `{}`\n" \
+               "Hash: `{}`\n" \
+               "Analyser: `{}`\n" \
+               "Analyser quality: `{}`\n" \
+               "Text: `{}`".format(datetime.fromtimestamp(self.created),
+                                   self.url,
+                                   "\n\n".join(list(map(lambda x: x.id, self.telegram_file_ids))),
+                                   self.image_hash,
+                                   self.analyser,
+                                   self.analyser_quality,
+                                   self.text)
+
+    def add_file_id(self, file_id: str):
+        file_id_entity = TelegramFileId(id=file_id, image_id=self.id)
+        file_ids = {file_id_entity}
+        file_ids.update(self.telegram_file_ids)
+        self.telegram_file_ids = list(file_ids)
+
+
+class TelegramFileId(Base):
+    """
+    Data model of a telegram file id
+    """
+    __tablename__ = 'telegram_file_ids'
+
+    id = Column(String, primary_key=True)
+    image_id = Column(Integer, ForeignKey('images.id'))
+    image = relationship("Image", back_populates="telegram_file_ids")
 
 
 class SQLAlchemyPersistence:
@@ -148,26 +124,22 @@ class SQLAlchemyPersistence:
         finally:
             session.close()
 
-    def get_all(self) -> [Entity]:
+    def get_all(self) -> [Image]:
         with self._session_scope() as session:
             return session.query(Image).order_by(Image.created.desc()).all()
 
-    def add_all(self, entities: [Entity]):
-        entities = list(map(lambda x: self._to_image(x), entities))
-
+    def add_all(self, entities: [Image]):
         with self._session_scope(True) as session:
             session.add_all(entities)
 
-    def add(self, entity: Entity):
-        image = self._to_image(entity)
-
+    def add(self, image: Image):
         with self._session_scope() as session:
             session.add(image)
             session.commit()
             session.refresh(image)
             return image
 
-    def get_random(self, page_size: int = None) -> Entity or [Entity]:
+    def get_random(self, page_size: int = None) -> Image or [Image]:
         with self._session_scope() as session:
             query = session.query(Image).order_by(func.random()).limit(page_size)
             if page_size is None:
@@ -175,19 +147,19 @@ class SQLAlchemyPersistence:
             else:
                 return query.all()
 
-    def find_by_image_hash(self, image_hash: str) -> Entity or None:
+    def find_by_image_hash(self, image_hash: str) -> Image or None:
         with self._session_scope() as session:
             return session.query(Image).filter_by(image_hash=image_hash).first()
 
-    def find_by_url(self, url: str) -> [Entity]:
+    def find_by_url(self, url: str) -> [Image]:
         with self._session_scope() as session:
             return session.query(Image).filter_by(url=url).all()
 
-    def find_by_telegram_file_id(self, telegram_file_id: str) -> [Entity]:
+    def find_by_telegram_file_id(self, telegram_file_id: str) -> [Image]:
         with self._session_scope() as session:
-            return session.query(Image).filter_by(telegram_file_id=telegram_file_id).first()
+            return session.query(Image).filter(Image.telegram_file_ids.any(id=telegram_file_id)).first()
 
-    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Image]:
         if limit is None:
             limit = 16
 
@@ -197,14 +169,14 @@ class SQLAlchemyPersistence:
             filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
             return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
 
-    def find_all_non_optimal(self, target_quality: int, limit: int = None) -> [Entity]:
+    def find_all_non_optimal(self, target_quality: int, limit: int = None) -> [Image]:
         if limit is None:
             limit = 1000
 
         with self._session_scope() as session:
             return self._find_non_optimal_query(session, target_quality).limit(limit).all()
 
-    def find_first_non_optimal(self, target_quality: float) -> Entity or None:
+    def find_first_non_optimal(self, target_quality: float) -> Image or None:
         with self._session_scope() as session:
             return self._find_non_optimal_query(session, target_quality).first()
 
@@ -222,29 +194,27 @@ class SQLAlchemyPersistence:
                 Image.analyser_quality,
                 Image.created)
 
-    def find_without_image_data(self) -> Entity or None:
+    def find_without_image_data(self) -> Image or None:
         with self._session_scope() as session:
             return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
                 Image.created).all()
 
-    def find_not_uploaded(self) -> Entity or None:
+    def find_not_uploaded(self) -> Image or None:
         with self._session_scope() as session:
             return session.query(Image).filter(
-                and_(Image.telegram_file_id.is_(None),
+                and_(~Image.telegram_file_ids.any(),
                      Image.image_hash.isnot(None))).order_by(Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).count()
 
-    def update(self, entity: Entity) -> None:
+    def update(self, image: Image) -> None:
         with self._session_scope(write=True) as session:
-            old = session.query(Image).with_for_update().filter_by(id=entity.id).first()
-            old.telegram_file_id = entity.telegram_file_id
-            old.analyser = entity.analyser
-            old.analyser_quality = entity.analyser_quality
-            old.text = entity.text
-            old.image_hash = entity.image_hash
+            old = session.query(Image).filter_by(id=image.id).first()
+            if old is None:
+                raise ValueError("Tried to update non-existing entity: {}".format(image))
+            session.merge(image)
 
     def count_items_this_month(self, analyser: str) -> int:
         with self._session_scope() as session:
@@ -260,7 +230,7 @@ class SQLAlchemyPersistence:
 
     def count_items_with_telegram_upload(self) -> int:
         with self._session_scope() as session:
-            return session.query(Image).filter(Image.telegram_file_id.isnot(None)).count()
+            return session.query(Image).filter(Image.telegram_file_ids.any()).count()
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         with self._session_scope() as session:
@@ -273,11 +243,3 @@ class SQLAlchemyPersistence:
     def count_items_with_image_data(self) -> int:
         with self._session_scope() as session:
             return session.query(Image).filter(Image.image_hash.isnot(None)).count()
-
-    def _to_image(self, entity: Entity) -> Image:
-        return Image(url=entity.url,
-                     text=entity.text,
-                     analyser=entity.analyser, analyser_quality=entity.analyser_quality,
-                     telegram_file_id=entity.telegram_file_id,
-                     image_hash=entity.image_hash,
-                     created=entity.created)
