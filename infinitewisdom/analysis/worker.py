@@ -69,7 +69,7 @@ class AnalysisWorker(RegularIntervalWorker):
 
         analyser = select_best_available_analyser(self._image_analysers, self._persistence)
         if analyser is None:
-            LOGGER.debug("No analyser available, skipping '{}'".format(entity.url))
+            # No analyser available, skipping
             return
 
         if entity.analyser_quality is not None and entity.analyser_quality >= analyser.get_quality():
