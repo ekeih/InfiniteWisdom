@@ -51,6 +51,10 @@ GOOGLE_VISION_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSI
 MICROSOFT_AZURE_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_AZURE)
 TESSERACT_FIND_TEXT_TIME = ANALYSER_FIND_TEXT_TIME.labels(name=IMAGE_ANALYSIS_TYPE_TESSERACT)
 
+ANALYSER_CAPACITY = Gauge('analyser_remaining_monthly_capacity',
+                          'Current capacity of a given analyser',
+                          ['name'])
+
 
 def get_metrics() -> []:
     entries = set()

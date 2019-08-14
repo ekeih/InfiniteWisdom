@@ -19,8 +19,8 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
-from infinitewisdom.stats import ANALYSER_TIME
-from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log
+from infinitewisdom.stats import ANALYSER_TIME, ANALYSER_CAPACITY
+from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log, remaining_capacity
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -54,6 +54,8 @@ class AnalysisWorker(RegularIntervalWorker):
         if len(self._image_analysers) <= 0:
             LOGGER.warning("No image analyser provided, not starting.")
             return
+
+        self._update_stats()
 
         super().start()
 
@@ -105,3 +107,10 @@ class AnalysisWorker(RegularIntervalWorker):
                 old_quality,
                 entity.analyser_quality,
                 format_for_single_line_log(entity.text)))
+
+        self._update_stats()
+
+    def _update_stats(self):
+        for analyser in self._image_analysers:
+            remaining = remaining_capacity(analyser, self._persistence)
+            ANALYSER_CAPACITY.labels(name=analyser.get_identifier()).set(remaining)
