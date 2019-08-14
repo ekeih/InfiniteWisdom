@@ -26,10 +26,10 @@ from telegram_click.permission.base import Permission
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION, COMMAND_COMMANDS
 from infinitewisdom.persistence import Image, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
-from infinitewisdom.util import send_photo, send_message, parse_telegram_command
+from infinitewisdom.util import send_photo, send_message
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -135,6 +135,9 @@ class InfiniteWisdomBot:
             CommandHandler(COMMAND_VERSION,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
                            callback=self._version_command_callback),
+            CommandHandler(COMMAND_COMMANDS,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._commands_command_callback),
             # unknown command handler
             MessageHandler(
                 filters=Filters.command & (~ Filters.forwarded),
@@ -372,29 +375,36 @@ class InfiniteWisdomBot:
                          entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
-    # @command(
-    #     name=COMMAND_COMMANDS,
-    #     description="List commands supported by this bot.",
-    # )
+    @command(
+        name=COMMAND_COMMANDS,
+        description="List commands supported by this bot.",
+        permissions=CONFIG_ADMINS
+    )
+    def _commands_command_callback(self, update: Update, context: CallbackContext):
+        bot = context.bot
+        message = update.effective_message
+        chat_id = update.effective_chat.id
+
+        from telegram_click import generate_command_list
+        text = generate_command_list(update, context)
+        send_message(bot, chat_id, text,
+                     parse_mode=ParseMode.MARKDOWN,
+                     reply_to=message.message_id)
+
     def _unknown_command_callback(self, update: Update, context: CallbackContext) -> None:
         """
         Handles unknown commands send by a user
         :param update: the chat update object
         :param context: telegram context
         """
-        bot = context.bot
         message = update.effective_message
-        chat_id = update.effective_chat.id
         username = "N/A"
         if update.effective_user is not None:
             username = update.effective_user.username
-        command, args = parse_telegram_command(message.text)
 
         user_is_admin = username in self._config.TELEGRAM_ADMIN_USERNAMES.value
         if user_is_admin:
-            send_message(bot, chat_id, ":eyes: Unsupported command: `/{}`".format(command),
-                         parse_mode=ParseMode.MARKDOWN,
-                         reply_to=message.message_id)
+            self._commands_command_callback(update, context)
             return
         else:
             self._inspire_callback(update, context)
