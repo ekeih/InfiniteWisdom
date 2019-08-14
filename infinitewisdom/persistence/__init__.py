@@ -19,7 +19,7 @@ from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     IMAGE_ANALYSIS_TYPE_AZURE, IMAGE_ANALYSIS_TYPE_HUMAN
 from infinitewisdom.persistence.image_persistence import ImageDataStore
-from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Entity
+from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Image
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
     IMAGE_ANALYSIS_HAS_TEXT_COUNT, ENTITIES_WITH_IMAGE_DATA_COUNT
 from infinitewisdom.util import create_hash
@@ -41,28 +41,28 @@ class ImageDataPersistence:
 
         self._update_stats()
 
-    def get_all(self) -> [Entity]:
+    def get_all(self) -> [Image]:
         """
         :return: a list of all entities
         """
         return self._database.get_all()
 
-    def add(self, entity: Entity, image_data: bytes) -> None:
+    def add(self, image: Image, image_data: bytes) -> None:
         """
         Persists a new entity
-        :param entity: the entity to add
+        :param image: the entity to add
         :param image_data: image data
         """
         try:
-            entity = self._database.add(entity)
+            image = self._database.add(image)
             image_hash = create_hash(image_data)
-            entity.image_hash = image_hash
-            self._database.update(entity)
+            image.image_hash = image_hash
+            self._database.update(image)
             self._image_data_store.put(image_hash, image_data)
         finally:
             self._update_stats()
 
-    def get_image_data(self, entity: Entity) -> bytes or None:
+    def get_image_data(self, entity: Image) -> bytes or None:
         """
         Get the image data for an entity
         :param entity: the entity to get the image for
@@ -70,7 +70,7 @@ class ImageDataPersistence:
         """
         return self._image_data_store.get(entity.image_hash)
 
-    def get_random(self, page_size: int = None) -> Entity or [Entity]:
+    def get_random(self, page_size: int = None) -> Image or [Image]:
         """
         Returns a random entity or number of random entities depending on parameters.
         If a page_size is specified a list of entities will be returned, otherwise a single entity or None.
@@ -79,7 +79,7 @@ class ImageDataPersistence:
         """
         return self._database.get_random(page_size)
 
-    def find_by_url(self, url: str) -> [Entity]:
+    def find_by_url(self, url: str) -> [Image]:
         """
         Finds a list of entities with exactly the given url
         :param url: the url to search for
@@ -87,7 +87,7 @@ class ImageDataPersistence:
         """
         return self._database.find_by_url(url)
 
-    def find_by_image_hash(self, image_hash: str) -> Entity or None:
+    def find_by_image_hash(self, image_hash: str) -> Image or None:
         """
         Finds an entity with exactly the given image_hash
         :param image_hash: the image hash to search for
@@ -95,7 +95,7 @@ class ImageDataPersistence:
         """
         return self._database.find_by_image_hash(image_hash)
 
-    def find_by_telegram_file_id(self, telegram_file_id: str) -> Entity or None:
+    def find_by_telegram_file_id(self, telegram_file_id: str) -> Image or None:
         """
         Finds an entity with exactly the given telegram file id
         :param telegram_file_id: the image hash to search for
@@ -103,7 +103,7 @@ class ImageDataPersistence:
         """
         return self._database.find_by_telegram_file_id(telegram_file_id)
 
-    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Entity]:
+    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Image]:
         """
         Finds a list of entities containing the given text
         :param text: the text to search for
@@ -113,7 +113,7 @@ class ImageDataPersistence:
         """
         return self._database.find_by_text(text, limit, offset)
 
-    def find_non_optimal(self, target_quality: int) -> Entity or None:
+    def find_non_optimal(self, target_quality: int) -> Image or None:
         """
         Finds an image with suboptimal analysis quality.
 
@@ -126,14 +126,14 @@ class ImageDataPersistence:
         """
         return self._database.find_first_non_optimal(target_quality)
 
-    def find_without_image_data(self) -> [Entity]:
+    def find_without_image_data(self) -> [Image]:
         """
         Finds entities without image data
         :return: list of entities without image data
         """
         return self._database.find_without_image_data()
 
-    def find_not_uploaded(self) -> Entity or None:
+    def find_not_uploaded(self) -> Image or None:
         """
         Finds an image that has not yet been uploaded to telegram servers
         :return: entity or None
@@ -147,7 +147,7 @@ class ImageDataPersistence:
         """
         return self._database.count()
 
-    def update(self, entity: Entity, image_data: bytes or None = None) -> None:
+    def update(self, entity: Image, image_data: bytes or None = None) -> None:
         """
         Updates the given entity
         :param entity: the entity with modified fields
@@ -180,7 +180,7 @@ class ImageDataPersistence:
         """
         return self._database.count_items_this_month(analyser)
 
-    def delete(self, entity: Entity) -> None:
+    def delete(self, entity: Image) -> None:
         """
         Removes an entity from the persistence
         :param entity: the entity to delete

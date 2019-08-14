@@ -21,7 +21,8 @@ import requests
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
-from infinitewisdom.persistence import ImageDataPersistence, Entity
+from infinitewisdom.persistence import ImageDataPersistence
+from infinitewisdom.persistence.sqlalchemy import Image
 from infinitewisdom.stats import CRAWLER_TIME
 from infinitewisdom.util import download_image_bytes, create_hash
 
@@ -66,7 +67,7 @@ class Crawler(RegularIntervalWorker):
             self._persistence.update(existing, image_data)
             return None
 
-        entity = Entity(url=url, created=time.time())
+        entity = Image(url=url, created=time.time())
         self._persistence.add(entity, image_data)
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))
 
