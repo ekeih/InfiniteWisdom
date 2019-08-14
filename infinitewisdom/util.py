@@ -93,7 +93,7 @@ def parse_telegram_command(text: str) -> (str, [str]):
 
 
 def send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,
-               caption: str = None) -> int:
+               caption: str = None) -> [str]:
     """
     Sends a photo to the given chat
     :param bot: the bot
@@ -101,7 +101,7 @@ def send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: 
     :param file_id: the telegram file id of the already uploaded image
     :param image_data: the image data
     :param caption: an optional image caption
-    :return: telegram image file id
+    :return: a set of telegram image file_id's
     """
     if image_data is not None:
         image_bytes_io = BytesIO(image_data)
@@ -116,7 +116,7 @@ def send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: 
         caption = _format_caption(caption)
 
     message = bot.send_photo(chat_id=chat_id, photo=photo, caption=caption)
-    return message.photo[-1].file_id
+    return set(map(lambda x: x.file_id, message.photo))
 
 
 def format_for_single_line_log(text: str) -> str:

@@ -61,10 +61,11 @@ def requires_image_reply(func):
             return
 
         reply_to_message = message.reply_to_message
-        reply_image = next(iter(sorted(reply_to_message.effective_attachment, key=lambda x: x.file_size, reverse=True)),
-                           None)
-        telegram_file_id = reply_image.file_id
-        entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+        for attachment in reply_to_message.effective_attachment:
+            telegram_file_id = attachment.file_id
+            entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+            if entity is not None:
+                break
 
         # otherwise call wrapped function as normal
         return func(self, update, context, entity, *args, **kwargs)
@@ -459,12 +460,16 @@ class InfiniteWisdomBot:
             caption = entity.text
 
         if len(entity.telegram_file_ids) > 0:
-            send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_ids[0].id, caption=caption)
+            file_ids = send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_ids[0].id, caption=caption)
+            for file_id in file_ids:
+                entity.add_file_id(file_id)
+            self._persistence.update(entity)
             return
 
         image_bytes = self._persistence._image_data_store.get(entity.image_hash)
-        file_id = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
-        entity.add_file_id(file_id)
+        file_ids = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+        for file_id in file_ids:
+            entity.add_file_id(file_id)
         self._persistence.update(entity, image_bytes)
 
     @staticmethod

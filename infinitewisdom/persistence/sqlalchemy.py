@@ -16,6 +16,7 @@
 import logging
 import time
 from contextlib import contextmanager
+from datetime import datetime
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
@@ -49,9 +50,26 @@ class Image(Base):
                                      cascade="all, delete-orphan",
                                      lazy="joined")
 
+    def __str__(self):
+        return "Created: `{}`\n" \
+               "URL: {}\n" \
+               "Telegram file ids: `{}`\n" \
+               "Hash: `{}`\n" \
+               "Analyser: `{}`\n" \
+               "Analyser quality: `{}`\n" \
+               "Text: `{}`".format(datetime.fromtimestamp(self.created),
+                                   self.url,
+                                   "\n\n".join(list(map(lambda x: x.id, self.telegram_file_ids))),
+                                   self.image_hash,
+                                   self.analyser,
+                                   self.analyser_quality,
+                                   self.text)
+
     def add_file_id(self, file_id: str):
         file_id_entity = TelegramFileId(id=file_id, image_id=self.id)
-        self.telegram_file_ids.extend({file_id_entity})
+        file_ids = {file_id_entity}
+        file_ids.update(self.telegram_file_ids)
+        self.telegram_file_ids = list(file_ids)
 
 
 class TelegramFileId(Base):
