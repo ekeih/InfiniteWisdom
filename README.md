@@ -158,7 +158,7 @@ Google Vision has a much higher success rate (no statistics about that yet)
 but comes with a price (literally). To use the Google Vision API you
 have to create an authentication token for `InfiniteWisdom` to use.
 Have a look at the official documentation on how to retrieve that and
-then specify it's path in the `InfiniteWisdom` configuration:
+then specify its path in the `InfiniteWisdom` configuration:
 
 ```yaml
 InfiniteWisdom:
@@ -186,10 +186,9 @@ InfiniteWisdom:
 #### Combining Analysers
 
 It's also possible to use multiple analysers at the same time. This
-allows you to use the costly Google Vision API for only a specific amount
+allows you to f. ex. use the costly Google Vision API for only a specific amount
 of images a month and use the free tesseract for the rest. To do that 
-simply specify all analysers you want to use next to each other so 
-it looks like this:
+simply specify all analysers you want to use next to each other:
 
 ```yaml
 InfiniteWisdom:
@@ -204,18 +203,22 @@ InfiniteWisdom:
     [...]
 ```
 
+`InfiniteWisdom` will automatically use the best available analyser for a specific 
+image at the given time. If a better result can be achieved with a 
+different analyser it will upgrade the analysis when the better analyser
+has enough capacity.
 
 ### Uploader
 
 By default `InfiniteWisdom` uses the downloaded image data to send 
-images to telegram users. When an image has been sent to a user and 
-was therefore uploaded to telegram servers this uploaded image can be 
+images to telegram users. When an image has been sent to a user - and 
+was therefore uploaded to telegram servers - the uploaded image can be 
 reused for subsequent messages. To speed up the process of uploading images
-to telegram servers this uploader can be used that sends images without 
-telegram image id in the given interval. 
+to telegram servers the uploader feature can be used to send images to a 
+specific (possibly private) chat.
 
 Note that the telegram bot API has a rate limit for sending messages to 
-a chat. Use an interval of at least 3 seconds to prevent problems. 
+a chat. Use an interval of **at least 3 seconds** to prevent problems. 
 
 ```yaml
 InfiniteWisdom:
@@ -227,7 +230,8 @@ InfiniteWisdom:
 
 ### Stats
 
-`InfiniteWisdom` uses prometheus to expose statistics to the public.
+`InfiniteWisdom` uses prometheus to expose internal performance and 
+analytics metrics.
 
 ```yaml
 InfiniteWisdom:
