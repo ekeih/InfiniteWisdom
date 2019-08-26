@@ -1,4 +1,4 @@
-FROM python:3.7-slim-stretch
+FROM python:3.6-slim-buster
 
 RUN apt-get update \
 && apt-get -y install tesseract-ocr tesseract-ocr-eng libsm6 python-opencv \
