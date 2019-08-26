@@ -2,7 +2,7 @@ FROM python:3.6-slim-buster
 
 RUN apt-get update \
 && apt-get -y install tesseract-ocr tesseract-ocr-eng libsm6 python-opencv \
-postgresql-client-11
+libpq-dev
 
 WORKDIR /app
 
