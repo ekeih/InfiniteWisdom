@@ -23,16 +23,16 @@ __version__ = "4.6.0"
 TELEGRAM_CAPTION_LENGTH_LIMIT = 200
 
 COMMAND_START = 'start'
-COMMAND_COMMANDS = 'commands'
-COMMAND_INSPIRE = 'inspire'
-COMMAND_FORCE_ANALYSIS = 'forceanalysis'
+COMMAND_COMMANDS = ['help', 'h']
+COMMAND_INSPIRE = ['inspire', 'i']
+COMMAND_FORCE_ANALYSIS = ['forceanalysis', 'fa']
 COMMAND_STATS = 'stats'
-COMMAND_VERSION = 'version'
+COMMAND_VERSION = ['version', 'v']
 
 REPLY_COMMAND_INFO = 'info'
-REPLY_COMMAND_TEXT = 'text'
+REPLY_COMMAND_TEXT = ['text', 't']
 
-REPLY_COMMAND_DELETE = 'delete'
+REPLY_COMMAND_DELETE = ['delete', 'd']
 
 DEFAULT_SQL_PERSISTENCE_URL = "sqlite:///infinitewisdom.db"
 DEFAULT_FILE_PERSISTENCE_BASE_PATH = "./.image_data"

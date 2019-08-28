@@ -127,6 +127,7 @@ def format_for_single_line_log(text: str) -> str:
     :param text:
     :return:
     """
+    text = "" if text is None else text
     return " ".join(text.split())
 
 

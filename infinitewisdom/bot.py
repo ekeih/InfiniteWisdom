@@ -52,20 +52,11 @@ def requires_image_reply(func):
         chat_id = message.chat_id
         reply_to_message = message.reply_to_message
 
-        if (reply_to_message.from_user is None
-                or reply_to_message.from_user.id != bot.id
-                or reply_to_message.effective_attachment is None):
+        entity = self._find_entity_for_message(bot.id, reply_to_message)
+        if entity is None:
             send_message(bot, chat_id,
                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
                          reply_to=message.message_id)
-            return
-
-        reply_to_message = message.reply_to_message
-        for attachment in reply_to_message.effective_attachment:
-            telegram_file_id = attachment.file_id
-            entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
-            if entity is not None:
-                break
 
         # otherwise call wrapped function as normal
         return func(self, update, context, entity, *args, **kwargs)
@@ -115,7 +106,7 @@ class InfiniteWisdomBot:
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
                            callback=self._inspire_callback),
             CommandHandler(COMMAND_FORCE_ANALYSIS,
-                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           filters=(~ Filters.forwarded),
                            callback=self._forceanalysis_callback),
             CommandHandler(COMMAND_STATS,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
@@ -126,9 +117,6 @@ class InfiniteWisdomBot:
             CommandHandler(REPLY_COMMAND_TEXT,
                            filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_text_command_callback),
-            CommandHandler(COMMAND_FORCE_ANALYSIS,
-                           filters=Filters.reply & (~ Filters.forwarded),
-                           callback=self._reply_force_analysis_command_callback),
             CommandHandler(REPLY_COMMAND_DELETE,
                            filters=Filters.reply & (~ Filters.forwarded),
                            callback=self._reply_delete_command_callback),
@@ -195,17 +183,18 @@ class InfiniteWisdomBot:
 
     @command(
         name=COMMAND_FORCE_ANALYSIS,
-        description="Force a reset of the existing image analysis data of the given image.",
+        description="Force a re-analysis of an existing image.",
         arguments=[
             Argument(
                 name="image_hash",
                 description="The hash of the image to reset.",
-                example="d41d8cd98f00b204e9800998ecf8427e"
+                example="d41d8cd98f00b204e9800998ecf8427e",
+                optional=True
             )
         ],
         permissions=CONFIG_ADMINS
     )
-    def _forceanalysis_callback(self, update: Update, context: CallbackContext, image_hash: str) -> None:
+    def _forceanalysis_callback(self, update: Update, context: CallbackContext, image_hash: str or None) -> None:
         """
         /forceanalysis command handler (with an argument)
         :param update: the chat update object
@@ -215,10 +204,21 @@ class InfiniteWisdomBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        entity = self._persistence.find_by_image_hash(image_hash)
+        if image_hash is not None:
+            entity = self._persistence.find_by_image_hash(image_hash)
+        elif message.reply_to_message is not None:
+            reply_to_message = message.reply_to_message
+
+            entity = self._find_entity_for_message(bot.id, reply_to_message)
+        else:
+            send_message(bot, chat_id,
+                         ":exclamation: Missing image reply or image hash argument".format(image_hash),
+                         reply_to=message.message_id)
+            return
+
         if entity is None:
             send_message(bot, chat_id,
-                         ":exclamation: No entity found for hash: {}".format(image_hash),
+                         ":exclamation: Image entity not found".format(image_hash),
                          reply_to=message.message_id)
             return
 
@@ -228,6 +228,30 @@ class InfiniteWisdomBot:
         send_message(bot, chat_id,
                      ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
                      reply_to=message.message_id)
+
+    def _find_entity_for_message(self, bot_id, message):
+        """
+        Tries to find an entity for a given message
+        :param bot_id: the id of this bot
+        :param message: the message
+        :return: image entity or None if no entity was found
+        """
+        if message is None:
+            return None
+
+        entity = None
+        if (message.from_user is None
+                or message.from_user.id != bot_id
+                or message.effective_attachment is None):
+            return None
+
+        for attachment in message.effective_attachment:
+            telegram_file_id = attachment.file_id
+            entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+            if entity is not None:
+                break
+
+        return entity
 
     @command(
         name=COMMAND_STATS,
@@ -347,32 +371,6 @@ class InfiniteWisdomBot:
         self._persistence.delete(entity_of_reply)
         send_message(bot, chat_id,
                      "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
-                     reply_to=message.message_id)
-
-    @command(
-        name=COMMAND_FORCE_ANALYSIS,
-        description="Force a reset of the existing image analysis data "
-                    "of the image that is referenced via message reply.",
-        permissions=CONFIG_ADMINS
-    )
-    @requires_image_reply
-    def _reply_force_analysis_command_callback(self, update: Update, context: CallbackContext,
-                                               entity_of_reply: Image or None) -> None:
-        """
-        /forceanalysis reply command handler
-        :param update: the chat update object
-        :param context: telegram context
-        """
-        bot = context.bot
-        message = update.effective_message
-        chat_id = update.effective_chat.id
-
-        entity_of_reply.analyser = None
-        entity_of_reply.analyser_quality = None
-        self._persistence.update(entity_of_reply)
-        send_message(bot, chat_id,
-                     ":wrench: Reset analyser data for the referenced image. (Hash: {})".format(
-                         entity_of_reply.image_hash),
                      reply_to=message.message_id)
 
     @command(
