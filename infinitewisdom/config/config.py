@@ -50,7 +50,8 @@ class AppConfig(Config):
             CONFIG_NODE_ROOT,
             CONFIG_NODE_TELEGRAM,
             "bot_token"
-        ])
+        ],
+        example="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11")
 
     TELEGRAM_INLINE_BADGE_SIZE = IntConfigEntry(
         yaml_path=[
@@ -84,7 +85,11 @@ class AppConfig(Config):
             CONFIG_NODE_TELEGRAM,
             "admin_usernames"
         ],
-        default=[]
+        default=[],
+        example=[
+            "myadminuser",
+            "myotheradminuser"
+        ]
     )
 
     UPLOADER_INTERVAL = FloatConfigEntry(
@@ -95,13 +100,14 @@ class AppConfig(Config):
         ],
         default=3.0)
 
-    UPLOADER_CHAT_ID = StringConfigEntry(
+    UPLOADER_CHAT_ID = IntConfigEntry(
         yaml_path=[
             CONFIG_NODE_ROOT,
             CONFIG_NODE_UPLOADER,
             "chat_id"
         ],
-        default=None)
+        default=None,
+        example=12345678)
 
     CRAWLER_INTERVAL = FloatConfigEntry(
         yaml_path=[
@@ -160,7 +166,8 @@ class AppConfig(Config):
             CONFIG_NODE_GOOGLE_VISION,
             "auth_file"
         ],
-        default=None)
+        default=None,
+        example="./InfiniteWisdom-1522618e7d39.json")
 
     IMAGE_ANALYSIS_GOOGLE_VISION_CAPACITY = IntConfigEntry(
         yaml_path=[
@@ -169,7 +176,8 @@ class AppConfig(Config):
             CONFIG_NODE_GOOGLE_VISION,
             CONFIG_NODE_CAPACITY_PER_MONTH
         ],
-        default=None)
+        default=None,
+        example=1000)
 
     IMAGE_ANALYSIS_MICROSOFT_AZURE_ENABLED = BoolConfigEntry(
         yaml_path=[
@@ -187,7 +195,8 @@ class AppConfig(Config):
             CONFIG_NODE_MICROSOFT_AZURE,
             "subscription_key"
         ],
-        default=None)
+        default=None,
+        example="1234567890684c3baa5a0605712345ab")
 
     IMAGE_ANALYSIS_MICROSOFT_AZURE_REGION = StringConfigEntry(
         yaml_path=[
