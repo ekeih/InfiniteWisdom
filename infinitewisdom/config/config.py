@@ -23,6 +23,8 @@ from container_app_conf.entry.float import FloatConfigEntry
 from container_app_conf.entry.int import IntConfigEntry
 from container_app_conf.entry.list import ListConfigEntry
 from container_app_conf.entry.string import StringConfigEntry
+from container_app_conf.source.env_source import EnvSource
+from container_app_conf.source.yaml_source import YamlSource
 
 from infinitewisdom.const import CONFIG_FILE_NAME, \
     CONFIG_NODE_ROOT, \
@@ -41,9 +43,13 @@ class AppConfig(ConfigBase):
     LOGGER = logging.getLogger(__name__)
     LOGGER.setLevel(logging.DEBUG)
 
-    @property
-    def config_file_names(self) -> [str]:
-        return [CONFIG_FILE_NAME]
+    def __new__(cls, *args, **kwargs):
+        yaml_source = YamlSource(CONFIG_FILE_NAME)
+        data_sources = [
+            EnvSource(),
+            yaml_source
+        ]
+        return super(AppConfig, cls).__new__(cls, data_sources=data_sources)
 
     TELEGRAM_BOT_TOKEN = StringConfigEntry(
         key_path=[
