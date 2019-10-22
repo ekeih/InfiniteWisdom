@@ -28,6 +28,7 @@ COMMAND_INSPIRE = ['inspire', 'i']
 COMMAND_FORCE_ANALYSIS = ['forceanalysis', 'fa']
 COMMAND_STATS = 'stats'
 COMMAND_VERSION = ['version', 'v']
+COMMAND_CONFIG = ['config', 'c']
 
 REPLY_COMMAND_INFO = 'info'
 REPLY_COMMAND_TEXT = ['text', 't']

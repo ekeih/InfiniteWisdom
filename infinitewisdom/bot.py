@@ -21,12 +21,14 @@ from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHan
     ChosenInlineResultHandler, CallbackContext
 from telegram_click.argument import Argument
 from telegram_click.decorator import command
+from telegram_click.permission import PRIVATE_CHAT
 from telegram_click.permission.base import Permission
 
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
-    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION, COMMAND_COMMANDS
+    REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION, COMMAND_COMMANDS, \
+    COMMAND_CONFIG
 from infinitewisdom.persistence import Image, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message
@@ -123,6 +125,9 @@ class InfiniteWisdomBot:
             CommandHandler(COMMAND_VERSION,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
                            callback=self._version_command_callback),
+            CommandHandler(COMMAND_CONFIG,
+                           filters=(~ Filters.reply) & (~ Filters.forwarded),
+                           callback=self._config_command_callback),
             CommandHandler(COMMAND_COMMANDS,
                            filters=(~ Filters.reply) & (~ Filters.forwarded),
                            callback=self._commands_command_callback),
@@ -290,6 +295,27 @@ class InfiniteWisdomBot:
         from infinitewisdom.const import __version__
         text = "{}".format(__version__)
         send_message(bot, chat_id, text, reply_to=message.message_id)
+
+    @command(
+        name=COMMAND_CONFIG,
+        description="Show current application configuration.",
+        permissions=PRIVATE_CHAT & CONFIG_ADMINS
+    )
+    def _config_command_callback(self, update: Update, context: CallbackContext):
+        """
+        /config command handler
+        :param update: the chat update object
+        :param context: telegram context
+        """
+        from container_app_conf.formatter.toml import TomlFormatter
+
+        bot = context.bot
+        chat_id = update.effective_message.chat_id
+        message_id = update.effective_message.message_id
+
+        text = self._config.print(formatter=TomlFormatter())
+        text = "```\n{}\n```".format(text)
+        send_message(bot, chat_id, text, parse_mode=ParseMode.MARKDOWN, reply_to=message_id)
 
     @command(
         name=REPLY_COMMAND_INFO,
