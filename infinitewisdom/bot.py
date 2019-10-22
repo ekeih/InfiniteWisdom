@@ -21,6 +21,7 @@ from telegram.ext import CommandHandler, Filters, InlineQueryHandler, MessageHan
     ChosenInlineResultHandler, CallbackContext
 from telegram_click.argument import Argument
 from telegram_click.decorator import command
+from telegram_click.permission import PRIVATE_CHAT
 from telegram_click.permission.base import Permission
 
 from infinitewisdom.analysis import ImageAnalyser
@@ -298,7 +299,7 @@ class InfiniteWisdomBot:
     @command(
         name=COMMAND_CONFIG,
         description="Show current application configuration.",
-        permissions=CONFIG_ADMINS
+        permissions=PRIVATE_CHAT & CONFIG_ADMINS
     )
     def _config_command_callback(self, update: Update, context: CallbackContext):
         """
