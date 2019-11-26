@@ -21,6 +21,7 @@ import requests
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
+from infinitewisdom.const import REQUESTS_TIMEOUT
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.persistence.sqlalchemy import Image
 from infinitewisdom.stats import CRAWLER_TIME
@@ -79,6 +80,6 @@ class Crawler(RegularIntervalWorker):
         Requests the image api to generate a new image url
         :return: the image url
         """
-        url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'})
+        url_page = requests.get('https://inspirobot.me/api', params={'generate': 'true'}, timeout=REQUESTS_TIMEOUT)
         url_page.raise_for_status()
         return url_page.text

@@ -23,7 +23,7 @@ from emoji import emojize
 from telegram import Bot
 
 from infinitewisdom.analysis import ImageAnalyser
-from infinitewisdom.const import TELEGRAM_CAPTION_LENGTH_LIMIT
+from infinitewisdom.const import TELEGRAM_CAPTION_LENGTH_LIMIT, REQUESTS_TIMEOUT
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -34,7 +34,7 @@ def download_image_bytes(url: str) -> bytes:
     Downloads the image from the given url
     :return: the downloaded image
     """
-    image = requests.get(url)
+    image = requests.get(url, timeout=REQUESTS_TIMEOUT)
     image.raise_for_status()
     return image.content
 
