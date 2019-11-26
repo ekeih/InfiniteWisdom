@@ -61,3 +61,5 @@ CONFIG_NODE_MICROSOFT_AZURE = "microsoft_azure"
 
 CONFIG_NODE_ENABLED = "enabled"
 CONFIG_NODE_CAPACITY_PER_MONTH = "capacity_per_month"
+
+REQUESTS_TIMEOUT = (5, 5)

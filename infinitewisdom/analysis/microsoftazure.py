@@ -17,6 +17,7 @@
 import requests
 
 from infinitewisdom.analysis import ImageAnalyser
+from infinitewisdom.const import REQUESTS_TIMEOUT
 from infinitewisdom.stats import MICROSOFT_AZURE_FIND_TEXT_TIME
 
 
@@ -67,9 +68,10 @@ class AzureComputerVision(ImageAnalyser):
 
         # a url can also be used
         # json_data = {'url': image_url}
-        # response = requests.post(self._ocr_url, headers=headers, params=params, json=json_data)
+        # response = requests.post(self._ocr_url, headers=headers, params=params, json=json_data,
+        #                          timeout=REQUESTS_TIMEOUT)
 
-        response = requests.post(self._ocr_url, headers=headers, params=params, data=image)
+        response = requests.post(self._ocr_url, headers=headers, params=params, data=image, timeout=REQUESTS_TIMEOUT)
         response.raise_for_status()
         analysis = response.json()
 
