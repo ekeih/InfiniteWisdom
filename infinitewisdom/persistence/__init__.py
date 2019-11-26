@@ -54,10 +54,9 @@ class ImageDataPersistence:
         :param image_data: image data
         """
         try:
-            image = self._database.add(image)
             image_hash = create_hash(image_data)
             image.image_hash = image_hash
-            self._database.update(image)
+            self._database.add(image)
             self._image_data_store.put(image_hash, image_data)
         finally:
             self._update_stats()

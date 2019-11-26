@@ -53,6 +53,7 @@ class TelegramUploader(RegularIntervalWorker):
 
         image_data = self._persistence._image_data_store.get(entity.image_hash)
         if image_data is None:
+            LOGGER.warning("Missing image data for entity, cant upload: {}".format(entity))
             return
 
         file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)

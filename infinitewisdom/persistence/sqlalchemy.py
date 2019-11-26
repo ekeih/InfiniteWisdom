@@ -51,19 +51,14 @@ class Image(Base):
                                      lazy="joined")
 
     def __str__(self):
-        return "Created: `{}`\n" \
-               "URL: {}\n" \
-               "Telegram file ids: `{}`\n" \
-               "Hash: `{}`\n" \
-               "Analyser: `{}`\n" \
-               "Analyser quality: `{}`\n" \
-               "Text: `{}`".format(datetime.fromtimestamp(self.created),
-                                   self.url,
-                                   "\n\n".join(list(map(lambda x: x.id, self.telegram_file_ids))),
-                                   self.image_hash,
-                                   self.analyser,
-                                   self.analyser_quality,
-                                   self.text)
+        return ", ".join(
+            ["Created: `{}`".format(datetime.fromtimestamp(self.created)),
+             "URL: {}".format(self.url),
+             "Telegram file ids: [{}]".format(", ".join(list(map(lambda x: x.id, self.telegram_file_ids)))),
+             "Hash: {}".format(self.image_hash),
+             "Analyser: {}".format(self.analyser),
+             "Analyser quality: {}".format(self.analyser_quality),
+             "Text: `{}`".format(self.text)])
 
     def add_file_id(self, file_id: str):
         file_id_entity = TelegramFileId(id=file_id, image_id=self.id)
