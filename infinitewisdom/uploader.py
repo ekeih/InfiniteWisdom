@@ -21,7 +21,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.stats import UPLOADER_TIME
-from infinitewisdom.util import send_photo
+from infinitewisdom.util import send_photo, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -53,7 +53,14 @@ class TelegramUploader(RegularIntervalWorker):
 
         image_data = self._persistence._image_data_store.get(entity.image_hash)
         if image_data is None:
-            LOGGER.warning("Missing image data for entity, cant upload: {}".format(entity))
+            LOGGER.warning("Missing image data for entity, trying to download: {}".format(entity))
+            try:
+                image_data = download_image_bytes(entity.url)
+                self._persistence.update(entity, image_data)
+            except Exception as e:
+                LOGGER.error(
+                    "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url), e)
+                self._persistence.delete(entity)
             return
 
         file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
