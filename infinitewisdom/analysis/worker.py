@@ -20,7 +20,8 @@ from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.stats import ANALYSER_TIME, ANALYSER_CAPACITY
-from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log, remaining_capacity
+from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log, remaining_capacity, \
+    download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
@@ -82,8 +83,22 @@ class AnalysisWorker(RegularIntervalWorker):
 
         image_data = self._persistence.get_image_data(entity)
         if image_data is None:
-            LOGGER.debug(
+            LOGGER.warning(
                 "No image data found for entity with image_hash {}, it will not be analysed.".format(entity.image_hash))
+            try:
+                image_data = download_image_bytes(entity.url)
+                self._persistence.update(entity, image_data)
+            except Exception as e:
+                # if len(entity.telegram_ids) > 0:
+                #     LOGGER.warning(
+                #         "Error downloading image data from original source, using telegram upload instead. {}".format(
+                #             entity))
+                #     # TODO:
+                # else:
+                LOGGER.error(
+                    "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
+                    e)
+                self._persistence.delete(entity)
             return
 
         old_analyser = entity.analyser
