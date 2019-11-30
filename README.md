@@ -242,6 +242,21 @@ InfiniteWisdom:
 
 ## Installation
 
+### Arch Linux
+
+For **PostgreSQL** support and installing the `psycopg2` python package
+through pip the `pg_config` binary is required which is part of the
+`python-psycopg2` package and can be installed using:
+
+```bash
+sudo pacman -S python-psycopg2
+```
+
+After that install the `psycopg2` package through `pip` as normal:
+```bash
+pip install psycopg2
+```
+
 ### FreeBSD
 
 On FreeBSD it is necessary to install the required dependencies manually
