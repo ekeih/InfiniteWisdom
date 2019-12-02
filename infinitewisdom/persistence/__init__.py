@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
+import threading
 
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
@@ -26,6 +27,8 @@ from infinitewisdom.util import create_hash
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+lock = threading.RLock()
 
 
 class ImageDataPersistence:
@@ -53,13 +56,14 @@ class ImageDataPersistence:
         :param image: the entity to add
         :param image_data: image data
         """
-        try:
-            image_hash = create_hash(image_data)
-            image.image_hash = image_hash
-            self._database.add(image)
-            self._image_data_store.put(image_hash, image_data)
-        finally:
-            self._update_stats()
+        with lock:
+            try:
+                image_hash = create_hash(image_data)
+                image.image_hash = image_hash
+                self._database.add(image)
+                self._image_data_store.put(image_hash, image_data)
+            finally:
+                self._update_stats()
 
     def get_image_data(self, entity: Image) -> bytes or None:
         """
@@ -92,7 +96,8 @@ class ImageDataPersistence:
         :param image_hash: the image hash to search for
         :return: entity or None
         """
-        return self._database.find_by_image_hash(image_hash)
+        with lock:
+            return self._database.find_by_image_hash(image_hash)
 
     def find_by_telegram_file_id(self, telegram_file_id: str) -> Image or None:
         """
@@ -123,21 +128,24 @@ class ImageDataPersistence:
         :param target_quality: the target quality to reach
         :return: a non-optimal entity or None
         """
-        return self._database.find_first_non_optimal(target_quality)
+        with lock:
+            return self._database.find_first_non_optimal(target_quality)
 
     def find_without_image_data(self) -> [Image]:
         """
         Finds entities without image data
         :return: list of entities without image data
         """
-        return self._database.find_without_image_data()
+        with lock:
+            return self._database.find_without_image_data()
 
     def find_not_uploaded(self) -> Image or None:
         """
         Finds an image that has not yet been uploaded to telegram servers
         :return: entity or None
         """
-        return self._database.find_not_uploaded()
+        with lock:
+            return self._database.find_not_uploaded()
 
     def count(self) -> int:
         """
@@ -152,24 +160,26 @@ class ImageDataPersistence:
         :param entity: the entity with modified fields
         :param image_data: the image data of the entity, passing None will not change existing image data
         """
-        try:
-            existing_entity = self._database.find_by_image_hash(entity.image_hash)
+        with lock:
+            try:
+                existing_entity = self._database.find_by_image_hash(entity.image_hash)
 
-            new_hash = None
-            if image_data is not None:
-                new_hash = create_hash(image_data)
+                new_hash = None
+                if image_data is not None:
+                    new_hash = create_hash(image_data)
 
-            if new_hash is not None and existing_entity.image_hash != new_hash:
-                LOGGER.debug(
-                    "Hash changed from {} to {} for entity with url: {}".format(existing_entity.image_hash, new_hash,
-                                                                                entity.url))
-                entity.image_hash = new_hash
-            if self._image_data_store.get(entity.image_hash) is None:
-                self._image_data_store.put(entity.image_hash, image_data)
-                LOGGER.debug("Saved new image data for hash: {}".format(entity.image_hash))
-            self._database.update(entity)
-        finally:
-            self._update_stats()
+                if new_hash is not None and existing_entity.image_hash != new_hash:
+                    LOGGER.debug(
+                        "Hash changed from {} to {} for entity with url: {}".format(existing_entity.image_hash,
+                                                                                    new_hash,
+                                                                                    entity.url))
+                    entity.image_hash = new_hash
+                if self._image_data_store.get(entity.image_hash) is None:
+                    self._image_data_store.put(entity.image_hash, image_data)
+                    LOGGER.debug("Saved new image data for hash: {}".format(entity.image_hash))
+                self._database.update(entity)
+            finally:
+                self._update_stats()
 
     def count_items_this_month(self, analyser: str) -> int:
         """
@@ -184,23 +194,25 @@ class ImageDataPersistence:
         Removes an entity from the persistence
         :param entity: the entity to delete
         """
-        try:
-            entity = self._database.find_by_image_hash(entity.image_hash)
-            if entity is not None:
-                self._image_data_store.put(entity.image_hash, None)
-                self._database.delete(entity.id)
-        finally:
-            self._update_stats()
+        with lock:
+            try:
+                entity = self._database.find_by_image_hash(entity.image_hash)
+                if entity is not None:
+                    self._image_data_store.put(entity.image_hash, None)
+                    self._database.delete(entity.id)
+            finally:
+                self._update_stats()
 
     def clear(self) -> None:
         """
         Removes all entries from the persistence
         """
-        try:
-            self._database.clear()
-            self._image_data_store.clear()
-        finally:
-            self._update_stats()
+        with lock:
+            try:
+                self._database.clear()
+                self._image_data_store.clear()
+            finally:
+                self._update_stats()
 
     @staticmethod
     def _contains_words(words: [str], text):
