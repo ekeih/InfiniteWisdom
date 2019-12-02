@@ -28,7 +28,7 @@ from infinitewisdom.util import create_hash
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
-lock = threading.RLock()
+lock = threading.Lock()
 
 
 class ImageDataPersistence:
