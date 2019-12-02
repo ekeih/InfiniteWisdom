@@ -50,6 +50,8 @@ class RegularIntervalWorker:
         """
         Schedules the next run
         """
+        if self._timer is not None:
+            self._timer.cancel()
         self._timer = threading.Timer(self._interval, self._worker_job)
         self._timer.start()
 
