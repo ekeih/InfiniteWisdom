@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
+import threading
 
 from telegram import Bot
 
@@ -25,6 +26,8 @@ from infinitewisdom.util import send_photo, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
+
+lock = threading.Lock()
 
 
 class TelegramUploader(RegularIntervalWorker):
@@ -47,26 +50,28 @@ class TelegramUploader(RegularIntervalWorker):
 
     @UPLOADER_TIME.time()
     def _run(self):
-        entity = self._persistence.find_not_uploaded()
-        if entity is None:
-            return
+        with lock:
+            entity = self._persistence.find_not_uploaded()
+            if entity is None:
+                return
 
-        image_data = self._persistence._image_data_store.get(entity.image_hash)
-        if image_data is None:
-            LOGGER.warning("Missing image data for entity, trying to download: {}".format(entity))
-            try:
-                image_data = download_image_bytes(entity.url)
-                self._persistence.update(entity, image_data)
-            except Exception as e:
-                LOGGER.error(
-                    "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url), e)
-                self._persistence.delete(entity)
-            return
+            image_data = self._persistence._image_data_store.get(entity.image_hash)
+            if image_data is None:
+                LOGGER.warning("Missing image data for entity, trying to download: {}".format(entity))
+                try:
+                    image_data = download_image_bytes(entity.url)
+                    self._persistence.update(entity, image_data)
+                except Exception as e:
+                    LOGGER.error(
+                        "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
+                        e)
+                    self._persistence.delete(entity)
+                return
 
-        file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
-        for file_id in file_ids:
-            entity.add_file_id(file_id)
-        self._persistence.update(entity, image_data)
-        LOGGER.debug(
-            "Send image '{}' to chat '{}' and updated entity with file_id {}.".format(
-                entity.url, self._chat_id, file_ids))
+            file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
+            for file_id in file_ids:
+                entity.add_file_id(file_id)
+            self._persistence.update(entity, image_data)
+            LOGGER.debug(
+                "Send image '{}' to chat '{}' and updated entity with file_id {}.".format(
+                    entity.url, self._chat_id, file_ids))
