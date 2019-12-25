@@ -31,7 +31,7 @@ from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANAL
     COMMAND_CONFIG
 from infinitewisdom.persistence import Image, ImageDataPersistence
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
-from infinitewisdom.util import send_photo, send_message
+from infinitewisdom.util import send_photo, send_message, cryptographic_hash
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
@@ -493,30 +493,34 @@ class InfiniteWisdomBot:
         if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
             caption = entity.text
 
-        if len(entity.telegram_file_ids) > 0:
-            file_ids = send_photo(bot=bot, chat_id=chat_id, file_id=entity.telegram_file_ids[0].id, caption=caption)
+        telegram_file_ids_for_current_bot = self.find_telegram_file_ids_for_current_bot(bot.token, entity)
+        if len(telegram_file_ids_for_current_bot) > 0:
+            file_ids = send_photo(bot=bot, chat_id=chat_id, file_id=telegram_file_ids_for_current_bot[0].id,
+                                  caption=caption)
+            bot_token = self._persistence.get_bot_token(bot.token)
             for file_id in file_ids:
-                entity.add_file_id(file_id)
+                entity.add_file_id(bot_token, file_id)
             self._persistence.update(entity)
             return
 
         image_bytes = self._persistence._image_data_store.get(entity.image_hash)
         file_ids = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+        bot_token = self._persistence.get_bot_token(bot.token)
         for file_id in file_ids:
-            entity.add_file_id(file_id)
+            entity.add_file_id(bot_token, file_id)
         self._persistence.update(entity, image_bytes)
 
-    @staticmethod
-    def _entity_to_inline_query_result(entity: Image):
+    def _entity_to_inline_query_result(self, entity: Image):
         """
         Creates a telegram inline query result object for the given entity
         :param entity: the entity to use
         :return: inline result object
         """
-        if len(entity.telegram_file_ids) > 0:
+        telegram_file_ids_for_current_bot = self.find_telegram_file_ids_for_current_bot(self.bot.token, entity)
+        if len(entity.telegram_file_ids_for_current_bot) > 0:
             return InlineQueryResultCachedPhoto(
                 id=entity.image_hash,
-                photo_file_id=str(entity.telegram_file_ids[0].id),
+                photo_file_id=str(telegram_file_ids_for_current_bot[0].id),
             )
         else:
             return InlineQueryResultPhoto(
@@ -526,3 +530,18 @@ class InfiniteWisdomBot:
                 photo_height=50,
                 photo_width=50
             )
+
+    @staticmethod
+    def find_telegram_file_ids_for_current_bot(token: str, entity: Image) -> []:
+        """
+        Filters all telegram file ids of an image for the current bot
+        :param token: the bot token
+        :param entity: the image entity
+        :return: list of matching telegram file ids
+        """
+        hashed_bot_token = cryptographic_hash(token)
+        result = []
+        for file_id in entity.telegram_file_ids:
+            if hashed_bot_token in list(map(lambda x: x.hashed_token, file_id.bot_tokens)):
+                result.append(file_id)
+        return result

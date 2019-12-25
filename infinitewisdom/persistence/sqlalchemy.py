@@ -18,16 +18,36 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
+from infinitewisdom.util import cryptographic_hash
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.DEBUG)
 
 Base = declarative_base()
+
+association_table = Table(
+    'association', Base.metadata,
+    Column('bot_token_id', Integer, ForeignKey('bot_tokens.id')),
+    Column('telegram_file_id_id', String, ForeignKey('telegram_file_ids.id'))
+)
+
+
+class BotToken(Base):
+    """
+    Data model of a (hashed) bot token
+    """
+    __tablename__ = 'bot_tokens'
+
+    id = Column(Integer, primary_key=True)
+    hashed_token = Column(String, index=True, unique=True)
+    telegram_file_ids = relationship("TelegramFileId",
+                                     secondary=association_table,
+                                     back_populates="bot_tokens")
 
 
 class Image(Base):
@@ -60,11 +80,26 @@ class Image(Base):
              "Analyser quality: {}".format(self.analyser_quality),
              "Text: `{}`".format(self.text)])
 
-    def add_file_id(self, file_id: str):
-        file_id_entity = TelegramFileId(id=file_id, image_id=self.id)
-        file_ids = {file_id_entity}
-        file_ids.update(self.telegram_file_ids)
-        self.telegram_file_ids = list(file_ids)
+    def add_file_id(self, bot_token: BotToken, file_id: str):
+        """
+        Adds a file id to the database
+        :param bot_token: the bot token that was used to upload the image
+        :param file_id: the file id
+        """
+        existing = list(filter(lambda x: x.id == file_id, self.telegram_file_ids))
+        if len(existing) > 0:
+            # update existing entity with (possibly) new bot_token
+            e = existing[0]
+            bot_token_entities = list(filter(lambda x: x.hashed_token == bot_token.hashed_token, e.bot_tokens))
+            if len(bot_token_entities) <= 0:
+                e.bot_tokens.append(bot_token)
+        else:
+            # add new file_id
+            file_id_entity = TelegramFileId(id=file_id, image_id=self.id)
+            file_id_entity.bot_tokens.append(bot_token)
+            file_ids = {file_id_entity}
+            file_ids.update(self.telegram_file_ids)
+            self.telegram_file_ids = list(file_ids)
 
 
 class TelegramFileId(Base):
@@ -75,6 +110,10 @@ class TelegramFileId(Base):
 
     id = Column(String, primary_key=True)
     image_id = Column(Integer, ForeignKey('images.id'))
+    bot_tokens = relationship("BotToken",
+                              secondary=association_table,
+                              back_populates="telegram_file_ids",
+                              lazy="joined")
     image = relationship("Image", back_populates="telegram_file_ids")
 
 
@@ -118,6 +157,18 @@ class SQLAlchemyPersistence:
             raise
         finally:
             session.close()
+
+    def get_or_add_bot_token(self, bot_token: str) -> BotToken:
+        hashed_bot_token = cryptographic_hash(bot_token)
+        with self._session_scope() as session:
+            entity = session.query(BotToken).filter_by(hashed_token=hashed_bot_token).first()
+            if entity is not None:
+                return entity
+            bot_token_entity = BotToken(hashed_token=hashed_bot_token)
+            session.add(bot_token_entity)
+            session.commit()
+            session.refresh(bot_token_entity)
+            return bot_token_entity
 
     def get_all(self) -> [Image]:
         with self._session_scope() as session:
@@ -194,7 +245,8 @@ class SQLAlchemyPersistence:
             return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
                 Image.created).all()
 
-    def find_not_uploaded(self) -> Image or None:
+    def find_not_uploaded(self, bot_token: str) -> Image or None:
+        # TODO: include bot_token in this check
         with self._session_scope() as session:
             return session.query(Image).filter(
                 and_(~Image.telegram_file_ids.any(),

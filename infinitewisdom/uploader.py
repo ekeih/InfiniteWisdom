@@ -51,7 +51,7 @@ class TelegramUploader(RegularIntervalWorker):
     @UPLOADER_TIME.time()
     def _run(self):
         with lock:
-            entity = self._persistence.find_not_uploaded()
+            entity = self._persistence.find_not_uploaded(self._bot.token)
             if entity is None:
                 return
 
@@ -69,8 +69,9 @@ class TelegramUploader(RegularIntervalWorker):
                 return
 
             file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
+            bot_token = self._persistence.get_bot_token(self._bot.token)
             for file_id in file_ids:
-                entity.add_file_id(file_id)
+                entity.add_file_id(bot_token, file_id)
             self._persistence.update(entity, image_data)
             LOGGER.debug(
                 "Send image '{}' to chat '{}' and updated entity with file_id {}.".format(

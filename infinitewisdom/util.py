@@ -48,6 +48,19 @@ def create_hash(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
 
 
+def cryptographic_hash(data: bytes or str) -> str:
+    """
+    Creates a cryptographic hash of the given bytes
+    :param data: data to hash
+    :return: hash
+    """
+    if isinstance(data, str):
+        data = data.encode()
+    import hashlib
+    hash = hashlib.sha512(data).hexdigest()
+    return hash
+
+
 def remaining_capacity(analyser, persistence) -> int:
     """
     Calculates the remaining capacity of an analyser
