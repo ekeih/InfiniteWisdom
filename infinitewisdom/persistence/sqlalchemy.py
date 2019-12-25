@@ -18,7 +18,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 
@@ -246,11 +246,14 @@ class SQLAlchemyPersistence:
                 Image.created).all()
 
     def find_not_uploaded(self, bot_token: str) -> Image or None:
-        # TODO: include bot_token in this check
+        hashed_bot_token = cryptographic_hash(bot_token)
         with self._session_scope() as session:
             return session.query(Image).filter(
-                and_(~Image.telegram_file_ids.any(),
-                     Image.image_hash.isnot(None))).order_by(Image.created).first()
+                and_(
+                    or_(~Image.telegram_file_ids.any(),
+                        ~TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token]))),
+                    Image.image_hash.isnot(None))
+            ).order_by(Image.created).first()
 
     def count(self) -> int:
         with self._session_scope() as session:
