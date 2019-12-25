@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 import threading
+import time
 
 from telegram import Bot
 
@@ -53,6 +54,8 @@ class TelegramUploader(RegularIntervalWorker):
         with lock:
             entity = self._persistence.find_not_uploaded()
             if entity is None:
+                # sleep for a longer time period to reduce load
+                time.sleep(60)
                 return
 
             image_data = self._persistence._image_data_store.get(entity.image_hash)
