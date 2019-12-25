@@ -249,7 +249,8 @@ class ImageDataPersistence:
         entites_with_image_data_count = self.count_items_with_image_data()
         ENTITIES_WITH_IMAGE_DATA_COUNT.set(entites_with_image_data_count)
 
-        uploaded_entites_count = self.count_items_with_telegram_upload()
+        bot_token = self._config.TELEGRAM_BOT_TOKEN.value
+        uploaded_entites_count = self.count_items_with_telegram_upload(bot_token)
         TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
 
         tesseract_entites_count = self.count_items_by_analyser(IMAGE_ANALYSIS_TYPE_TESSERACT)
@@ -267,11 +268,12 @@ class ImageDataPersistence:
         entities_with_text_count = self.count_items_with_text()
         IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)
 
-    def count_items_with_telegram_upload(self) -> int:
+    def count_items_with_telegram_upload(self, bot_token: str) -> int:
         """
+        :param bot_token: the bot token
         :return: the number of images that have been uploaded to telegram servers
         """
-        return self._database.count_items_with_telegram_upload()
+        return self._database.count_items_with_telegram_upload(bot_token)
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         """

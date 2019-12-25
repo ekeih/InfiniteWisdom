@@ -251,7 +251,8 @@ class SQLAlchemyPersistence:
             return session.query(Image).filter(
                 and_(
                     or_(~Image.telegram_file_ids.any(),
-                        ~TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token]))),
+                        ~Image.telegram_file_ids.any(
+                            TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token])))),
                     Image.image_hash.isnot(None))
             ).order_by(Image.created).first()
 
@@ -278,9 +279,12 @@ class SQLAlchemyPersistence:
     def clear(self) -> None:
         raise NotImplementedError()
 
-    def count_items_with_telegram_upload(self) -> int:
+    def count_items_with_telegram_upload(self, bot_token: str) -> int:
+        hashed_bot_token = cryptographic_hash(bot_token)
         with self._session_scope() as session:
-            return session.query(Image).filter(Image.telegram_file_ids.any()).count()
+            return session.query(Image).filter(
+                and_(Image.telegram_file_ids.any(
+                    TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token]))))).count()
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         with self._session_scope() as session:
