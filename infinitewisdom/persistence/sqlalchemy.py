@@ -254,7 +254,10 @@ class SQLAlchemyPersistence:
                         ~Image.telegram_file_ids.any(
                             TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token])))),
                     Image.image_hash.isnot(None))
-            ).order_by(Image.created).first()
+            ).first()
+            # OrderBy causes HUGE load on the postgres process (100% over several minutes without any sign of finishing up)
+            # so we have to omit this for now
+            # .order_by(Image.created)
 
     def count(self) -> int:
         with self._session_scope() as session:
