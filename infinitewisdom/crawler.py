@@ -35,6 +35,7 @@ class Crawler(RegularIntervalWorker):
     """
     Crawler used to fetch new images from the image API
     """
+    URL_CACHE = {}
 
     def __init__(self, config: AppConfig, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
         """
@@ -55,6 +56,10 @@ class Crawler(RegularIntervalWorker):
         :return: the added url
         """
         url = self._fetch_generated_image_url()
+        if url in self.URL_CACHE:
+            # skip already processed url
+            return None
+
         image_data = download_image_bytes(url)
         image_hash = create_hash(image_data)
 
@@ -65,13 +70,15 @@ class Crawler(RegularIntervalWorker):
                     'Found already known image hash for a different url than expected. Old: {} New: {} Hash: {}'.format(
                         existing.url, url, image_hash))
                 existing.url = url
-            self._persistence.update(existing, image_data)
+                self._persistence.update(existing, image_data)
+            self.URL_CACHE[url] = True
             return None
 
         entity = Image(url=url, created=time.time())
         self._persistence.add(entity, image_data)
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(), url))
 
+        self.URL_CACHE[url] = True
         return url
 
     @staticmethod

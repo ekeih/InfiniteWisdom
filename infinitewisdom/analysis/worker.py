@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
+import time
 
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
@@ -68,17 +69,23 @@ class AnalysisWorker(RegularIntervalWorker):
         entity = self._persistence.find_non_optimal(self._target_quality)
         if entity is None:
             # nothing to analyse
+            # sleep for a longer time period to reduce db load
+            time.sleep(60)
             return
 
         analyser = select_best_available_analyser(self._image_analysers, self._persistence)
         if analyser is None:
             # No analyser available, skipping
+            # sleep for a longer time period to reduce db load
+            time.sleep(60)
             return
 
         if entity.analyser_quality is not None and entity.analyser_quality >= analyser.get_quality():
             LOGGER.debug(
                 "Not analysing '{}' with '{}' because it wouldn't improve analysis quality ({} vs {})".format(
                     entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
+            # sleep for a longer time period to reduce db load
+            time.sleep(60)
             return
 
         image_data = self._persistence.get_image_data(entity)
