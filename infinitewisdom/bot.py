@@ -517,7 +517,7 @@ class InfiniteWisdomBot:
         :return: inline result object
         """
         telegram_file_ids_for_current_bot = self.find_telegram_file_ids_for_current_bot(self.bot.token, entity)
-        if len(entity.telegram_file_ids_for_current_bot) > 0:
+        if len(telegram_file_ids_for_current_bot) > 0:
             return InlineQueryResultCachedPhoto(
                 id=entity.image_hash,
                 photo_file_id=str(telegram_file_ids_for_current_bot[0].id),
