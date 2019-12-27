@@ -20,7 +20,7 @@ from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
     IMAGE_ANALYSIS_TYPE_AZURE, IMAGE_ANALYSIS_TYPE_HUMAN
 from infinitewisdom.persistence.image_persistence import ImageDataStore
-from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Image
+from infinitewisdom.persistence.sqlalchemy import SQLAlchemyPersistence, Image, BotToken
 from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALYSIS_TYPE_COUNT, \
     IMAGE_ANALYSIS_HAS_TEXT_COUNT, ENTITIES_WITH_IMAGE_DATA_COUNT
 from infinitewisdom.util import create_hash
@@ -43,6 +43,12 @@ class ImageDataPersistence:
         self._image_data_store = ImageDataStore(config.FILE_PERSISTENCE_BASE_PATH.value)
 
         self._update_stats()
+
+    def get_bot_token(self, bot_token: str) -> BotToken:
+        """
+        :return: the bot token entity
+        """
+        return self._database.get_or_add_bot_token(bot_token)
 
     def get_all(self) -> [Image]:
         """
@@ -139,13 +145,14 @@ class ImageDataPersistence:
         with lock:
             return self._database.find_without_image_data()
 
-    def find_not_uploaded(self) -> Image or None:
+    def find_not_uploaded(self, bot_token: str) -> Image or None:
         """
         Finds an image that has not yet been uploaded to telegram servers
+        :param bot_token: the bot token
         :return: entity or None
         """
         with lock:
-            return self._database.find_not_uploaded()
+            return self._database.find_not_uploaded(bot_token)
 
     def count(self) -> int:
         """
@@ -242,7 +249,8 @@ class ImageDataPersistence:
         entites_with_image_data_count = self.count_items_with_image_data()
         ENTITIES_WITH_IMAGE_DATA_COUNT.set(entites_with_image_data_count)
 
-        uploaded_entites_count = self.count_items_with_telegram_upload()
+        bot_token = self._config.TELEGRAM_BOT_TOKEN.value
+        uploaded_entites_count = self.count_items_with_telegram_upload(bot_token)
         TELEGRAM_ENTITIES_COUNT.set(uploaded_entites_count)
 
         tesseract_entites_count = self.count_items_by_analyser(IMAGE_ANALYSIS_TYPE_TESSERACT)
@@ -260,11 +268,12 @@ class ImageDataPersistence:
         entities_with_text_count = self.count_items_with_text()
         IMAGE_ANALYSIS_HAS_TEXT_COUNT.set(entities_with_text_count)
 
-    def count_items_with_telegram_upload(self) -> int:
+    def count_items_with_telegram_upload(self, bot_token: str) -> int:
         """
+        :param bot_token: the bot token
         :return: the number of images that have been uploaded to telegram servers
         """
-        return self._database.count_items_with_telegram_upload()
+        return self._database.count_items_with_telegram_upload(bot_token)
 
     def count_items_by_analyser(self, analyser_id: str) -> int:
         """

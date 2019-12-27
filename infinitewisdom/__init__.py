@@ -34,6 +34,7 @@ class RegularIntervalWorker:
         Starts the worker
         """
         if self._timer is None:
+            LOGGER.debug(f"Starting worker: {self.__class__.__name__}")
             self._schedule_next_run()
         else:
             LOGGER.debug("Already running, ignoring start() call")
