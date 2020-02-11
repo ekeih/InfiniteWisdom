@@ -61,19 +61,19 @@ def cryptographic_hash(data: bytes or str) -> str:
     return hash
 
 
-def remaining_capacity(analyser, persistence) -> int:
+def remaining_capacity(session, analyser, persistence) -> int:
     """
     Calculates the remaining capacity of an analyser
     :param analyser: the analyser to check
     :param persistence: persistence
     :return: the remaining capacity of the analyser
     """
-    count = persistence.count_items_this_month(analyser.get_identifier())
+    count = persistence.count_items_this_month(session, analyser.get_identifier())
     remaining = analyser.get_monthly_capacity() - count
     return remaining
 
 
-def select_best_available_analyser(analysers: [ImageAnalyser], persistence) -> ImageAnalyser or None:
+def select_best_available_analyser(session, analysers: [ImageAnalyser], persistence) -> ImageAnalyser or None:
     """
     Selects the best available analyser based on it's quality and remaining capacity
     :param analysers: the analysers to choose from
@@ -84,11 +84,11 @@ def select_best_available_analyser(analysers: [ImageAnalyser], persistence) -> I
     if len(analysers) == 1:
         return analysers[0]
 
-    available = list(filter(lambda x: remaining_capacity(x, persistence) > 0, analysers))
+    available = list(filter(lambda x: remaining_capacity(session, x, persistence) > 0, analysers))
     if len(available) <= 0:
         return None
     else:
-        return sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(x, persistence)))[0]
+        return sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(session, x, persistence)))[0]
 
 
 def parse_telegram_command(text: str) -> (str, [str]):

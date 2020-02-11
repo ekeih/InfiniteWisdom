@@ -117,6 +117,24 @@ class TelegramFileId(Base):
     image = relationship("Image", back_populates="telegram_file_ids")
 
 
+_sessionmaker = sessionmaker()
+
+
+@contextmanager
+def _session_scope(write: bool = True) -> Session:
+    """Provide a transactional scope around a series of operations."""
+    session = _sessionmaker()
+    try:
+        yield session
+        if write:
+            session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 class SQLAlchemyPersistence:
     """
     Implementation using SQLAlchemy
@@ -129,10 +147,12 @@ class SQLAlchemyPersistence:
         # TODO: this currently also logs to file because of alembic
         self._migrate_db(url)
 
-        self._engine = create_engine(url, echo=False)
-        self._sessionmaker = sessionmaker(bind=self._engine)
+        global _sessionmaker
+        engine = create_engine(url, echo=False)
+        _sessionmaker.configure(bind=engine)
 
-        LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count()))
+        with _session_scope() as session:
+            LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count(session)))
 
     def _migrate_db(self, url: str):
         from alembic.config import Config
@@ -144,90 +164,65 @@ class SQLAlchemyPersistence:
 
         alembic.command.upgrade(config, 'head')
 
-    @contextmanager
-    def _session_scope(self, write: bool = False) -> Session:
-        """Provide a transactional scope around a series of operations."""
-        session = self._sessionmaker()
-        try:
-            yield session
-            if write:
-                session.commit()
-        except:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-    def get_or_add_bot_token(self, bot_token: str) -> BotToken:
+    def get_or_add_bot_token(self, session: Session, bot_token: str) -> BotToken:
         hashed_bot_token = cryptographic_hash(bot_token)
-        with self._session_scope() as session:
-            entity = session.query(BotToken).filter_by(hashed_token=hashed_bot_token).first()
-            if entity is not None:
-                return entity
-            bot_token_entity = BotToken(hashed_token=hashed_bot_token)
-            session.add(bot_token_entity)
-            session.commit()
-            session.refresh(bot_token_entity)
-            return bot_token_entity
+        entity = session.query(BotToken).filter_by(hashed_token=hashed_bot_token).first()
+        if entity is not None:
+            return entity
+        bot_token_entity = BotToken(hashed_token=hashed_bot_token)
+        session.add(bot_token_entity)
+        session.commit()
+        session.refresh(bot_token_entity)
+        return bot_token_entity
 
-    def get_all(self) -> [Image]:
-        with self._session_scope() as session:
-            return session.query(Image).order_by(Image.created.desc()).all()
+    def get_all(self, session: Session) -> [Image]:
+        return session.query(Image).order_by(Image.created.desc()).all()
 
-    def add_all(self, entities: [Image]):
-        with self._session_scope(True) as session:
-            session.add_all(entities)
+    def add_all(self, session: Session, entities: [Image]):
+        session.add_all(entities)
 
-    def add(self, image: Image):
-        with self._session_scope() as session:
-            session.add(image)
-            session.commit()
-            session.refresh(image)
-            return image
+    def add(self, session: Session, image: Image):
+        session.add(image)
+        session.commit()
+        session.refresh(image)
+        return image
 
-    def get_random(self, page_size: int = None) -> Image or [Image]:
-        with self._session_scope() as session:
-            query = session.query(Image).order_by(func.random()).limit(page_size)
-            if page_size is None:
-                return query.first()
-            else:
-                return query.all()
+    def get_random(self, session: Session, page_size: int = None) -> Image or [Image]:
+        query = session.query(Image).order_by(func.random()).limit(page_size)
+        if page_size is None:
+            return query.first()
+        else:
+            return query.all()
 
-    def find_by_image_hash(self, image_hash: str) -> Image or None:
-        with self._session_scope() as session:
-            return session.query(Image).filter_by(image_hash=image_hash).first()
+    def find_by_image_hash(self, session: Session, image_hash: str) -> Image or None:
+        return session.query(Image).filter_by(image_hash=image_hash).first()
 
-    def find_by_url(self, url: str) -> [Image]:
-        with self._session_scope() as session:
-            return session.query(Image).filter_by(url=url).all()
+    def find_by_url(self, session: Session, url: str) -> [Image]:
+        return session.query(Image).filter_by(url=url).all()
 
-    def find_by_telegram_file_id(self, telegram_file_id: str) -> [Image]:
-        with self._session_scope() as session:
-            return session.query(Image).filter(Image.telegram_file_ids.any(id=telegram_file_id)).first()
+    def find_by_telegram_file_id(self, session: Session, telegram_file_id: str) -> [Image]:
+        return session.query(Image).filter(Image.telegram_file_ids.any(id=telegram_file_id)).first()
 
-    def find_by_text(self, text: str = None, limit: int = None, offset: int = None) -> [Image]:
+    def find_by_text(self, session: Session, text: str = None, limit: int = None, offset: int = None) -> [Image]:
         if limit is None:
             limit = 16
 
         words = text.split(" ")
 
-        with self._session_scope() as session:
-            filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
-            return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
+        filters = list(map(lambda word: Image.text.ilike("%{}%".format(word)), words))
+        return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
 
-    def find_all_non_optimal(self, target_quality: int, limit: int = None) -> [Image]:
+    def find_all_non_optimal(self, session: Session, target_quality: int, limit: int = None) -> [Image]:
         if limit is None:
             limit = 1000
 
-        with self._session_scope() as session:
-            return self._find_non_optimal_query(session, target_quality).limit(limit).all()
+        return self._find_non_optimal_query(session, target_quality).limit(limit).all()
 
-    def find_first_non_optimal(self, target_quality: float) -> Image or None:
-        with self._session_scope() as session:
-            return self._find_non_optimal_query(session, target_quality).first()
+    def find_first_non_optimal(self, session: Session, target_quality: float) -> Image or None:
+        return self._find_non_optimal_query(session, target_quality).first()
 
     @staticmethod
-    def _find_non_optimal_query(session, target_quality: float):
+    def _find_non_optimal_query(session: Session, target_quality: float):
         q1 = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(
             func.length(Image.text) > 0,
             Image.created)
@@ -240,63 +235,53 @@ class SQLAlchemyPersistence:
                 Image.analyser_quality,
                 Image.created)
 
-    def find_without_image_data(self) -> Image or None:
-        with self._session_scope() as session:
-            return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
-                Image.created).all()
+    def find_without_image_data(self, session: Session) -> Image or None:
+        return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
+            Image.created).all()
 
-    def find_not_uploaded(self, bot_token: str) -> Image or None:
+    def find_not_uploaded(self, session: Session, bot_token: str) -> Image or None:
         hashed_bot_token = cryptographic_hash(bot_token)
-        with self._session_scope() as session:
-            return session.query(Image).filter(
-                and_(
-                    or_(~Image.telegram_file_ids.any(),
-                        ~Image.telegram_file_ids.any(
-                            TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token])))),
-                    Image.image_hash.isnot(None))
-            ).first()
-            # OrderBy causes HUGE load on the postgres process (100% over several minutes without any sign of finishing up)
-            # so we have to omit this for now
-            # .order_by(Image.created)
+        return session.query(Image).filter(
+            and_(
+                or_(~Image.telegram_file_ids.any(),
+                    ~Image.telegram_file_ids.any(
+                        TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token])))),
+                Image.image_hash.isnot(None))
+        ).first()
+        # OrderBy causes HUGE load on the postgres process (100% over several minutes without any sign of finishing up)
+        # so we have to omit this for now
+        # .order_by(Image.created)
 
-    def count(self) -> int:
-        with self._session_scope() as session:
-            return session.query(Image).count()
+    def count(self, session: Session) -> int:
+        return session.query(Image).count()
 
-    def update(self, image: Image) -> None:
-        with self._session_scope(write=True) as session:
-            old = session.query(Image).filter_by(id=image.id).first()
-            if old is None:
-                raise ValueError("Tried to update non-existing entity: {}".format(image))
-            session.merge(image)
+    def update(self, session: Session, image: Image) -> None:
+        old = session.query(Image).filter_by(id=image.id).first()
+        if old is None:
+            raise ValueError("Tried to update non-existing entity: {}".format(image))
+        session.merge(image)
 
-    def count_items_this_month(self, analyser: str) -> int:
-        with self._session_scope() as session:
-            return session.query(Image).filter(Image.analyser == analyser).filter(
-                Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
+    def count_items_this_month(self, session: Session, analyser: str) -> int:
+        return session.query(Image).filter(Image.analyser == analyser).filter(
+            Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
-    def delete(self, entity_id: int) -> None:
-        with self._session_scope(write=True) as session:
-            session.query(Image).filter_by(id=entity_id).delete()
+    def delete(self, session: Session, entity_id: int) -> None:
+        session.query(Image).filter_by(id=entity_id).delete()
 
     def clear(self) -> None:
         raise NotImplementedError()
 
-    def count_items_with_telegram_upload(self, bot_token: str) -> int:
+    def count_items_with_telegram_upload(self, session: Session, bot_token: str) -> int:
         hashed_bot_token = cryptographic_hash(bot_token)
-        with self._session_scope() as session:
-            return session.query(Image).filter(
-                and_(Image.telegram_file_ids.any(
-                    TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token]))))).count()
+        return session.query(Image).filter(
+            and_(Image.telegram_file_ids.any(
+                TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token]))))).count()
 
-    def count_items_by_analyser(self, analyser_id: str) -> int:
-        with self._session_scope() as session:
-            return session.query(Image).filter(Image.analyser == analyser_id).count()
+    def count_items_by_analyser(self, session: Session, analyser_id: str) -> int:
+        return session.query(Image).filter(Image.analyser == analyser_id).count()
 
-    def count_items_with_text(self) -> int:
-        with self._session_scope() as session:
-            return session.query(Image).filter(func.length(Image.text) > 0).count()
+    def count_items_with_text(self, session: Session) -> int:
+        return session.query(Image).filter(func.length(Image.text) > 0).count()
 
-    def count_items_with_image_data(self) -> int:
-        with self._session_scope() as session:
-            return session.query(Image).filter(Image.image_hash.isnot(None)).count()
+    def count_items_with_image_data(self, session: Session) -> int:
+        return session.query(Image).filter(Image.image_hash.isnot(None)).count()

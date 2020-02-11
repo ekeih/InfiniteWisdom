@@ -34,7 +34,7 @@ def migrate_entity(entity):
         progress.update(n=1)
 
         if entity.image_hash is not None:
-            existing_image_data = p._image_data_store.get(entity.image_hash)
+            existing_image_data = p.get_image_data(entity)
             if existing_image_data is not None:
                 existing_hash = create_hash(existing_image_data)
                 if existing_hash == entity.image_hash:

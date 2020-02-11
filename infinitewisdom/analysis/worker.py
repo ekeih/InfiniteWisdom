@@ -19,7 +19,7 @@ import time
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
-from infinitewisdom.persistence import ImageDataPersistence
+from infinitewisdom.persistence import ImageDataPersistence, _session_scope
 from infinitewisdom.stats import ANALYSER_TIME, ANALYSER_CAPACITY
 from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log, remaining_capacity, \
     download_image_bytes
@@ -57,7 +57,8 @@ class AnalysisWorker(RegularIntervalWorker):
             LOGGER.warning("No image analyser provided, not starting.")
             return
 
-        self._update_stats()
+        with _session_scope(False) as session:
+            self._update_stats(session)
 
         super().start()
 
@@ -66,73 +67,75 @@ class AnalysisWorker(RegularIntervalWorker):
         """
         The job that is executed regularly by this crawler
         """
-        entity = self._persistence.find_non_optimal(self._target_quality)
-        if entity is None:
-            # nothing to analyse
-            # sleep for a longer time period to reduce db load
-            time.sleep(60)
-            return
+        with _session_scope() as session:
+            entity = self._persistence.find_non_optimal(session, self._target_quality)
+            if entity is None:
+                # nothing to analyse
+                # sleep for a longer time period to reduce db load
+                time.sleep(60)
+                return
 
-        analyser = select_best_available_analyser(self._image_analysers, self._persistence)
-        if analyser is None:
-            # No analyser available, skipping
-            # sleep for a longer time period to reduce db load
-            time.sleep(60)
-            return
+            analyser = select_best_available_analyser(session, self._image_analysers, self._persistence)
+            if analyser is None:
+                # No analyser available, skipping
+                # sleep for a longer time period to reduce db load
+                time.sleep(60)
+                return
 
-        if entity.analyser_quality is not None and entity.analyser_quality >= analyser.get_quality():
+            if entity.analyser_quality is not None and entity.analyser_quality >= analyser.get_quality():
+                LOGGER.debug(
+                    "Not analysing '{}' with '{}' because it wouldn't improve analysis quality ({} vs {})".format(
+                        entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
+                # sleep for a longer time period to reduce db load
+                time.sleep(60)
+                return
+
+            image_data = self._persistence.get_image_data(entity)
+            if image_data is None:
+                LOGGER.warning(
+                    "No image data found for entity with image_hash {}, it will not be analysed.".format(
+                        entity.image_hash))
+                try:
+                    image_data = download_image_bytes(entity.url)
+                    self._persistence.update(session, entity, image_data)
+                except Exception as e:
+                    # if len(entity.telegram_ids) > 0:
+                    #     LOGGER.warning(
+                    #         "Error downloading image data from original source, using telegram upload instead. {}".format(
+                    #             entity))
+                    #     # TODO:
+                    # else:
+                    LOGGER.error(
+                        "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
+                        e)
+                    self._persistence.delete(session, entity)
+                return
+
+            old_analyser = entity.analyser
+            old_quality = entity.analyser_quality
+            if old_quality is None:
+                old_quality = 0
+
+            entity.analyser = analyser.get_identifier()
+            entity.analyser_quality = analyser.get_quality()
+            new_text = analyser.find_text(image_data)
+
+            if (new_text is None or len(new_text) <= 0) and entity.text is not None and len(entity.text) > 0:
+                LOGGER.debug("Ignoring new analysis text because it would delete it")
+            else:
+                entity.text = new_text
+
+            self._persistence.update(session, entity, image_data)
             LOGGER.debug(
-                "Not analysing '{}' with '{}' because it wouldn't improve analysis quality ({} vs {})".format(
-                    entity.url, analyser.get_identifier(), entity.analyser_quality, analyser.get_quality()))
-            # sleep for a longer time period to reduce db load
-            time.sleep(60)
-            return
+                "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {}): {}".format(
+                    entity.url, analyser.get_identifier(), old_analyser, entity.analyser_quality - old_quality,
+                    old_quality,
+                    entity.analyser_quality,
+                    format_for_single_line_log(entity.text)))
 
-        image_data = self._persistence.get_image_data(entity)
-        if image_data is None:
-            LOGGER.warning(
-                "No image data found for entity with image_hash {}, it will not be analysed.".format(entity.image_hash))
-            try:
-                image_data = download_image_bytes(entity.url)
-                self._persistence.update(entity, image_data)
-            except Exception as e:
-                # if len(entity.telegram_ids) > 0:
-                #     LOGGER.warning(
-                #         "Error downloading image data from original source, using telegram upload instead. {}".format(
-                #             entity))
-                #     # TODO:
-                # else:
-                LOGGER.error(
-                    "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
-                    e)
-                self._persistence.delete(entity)
-            return
+            self._update_stats(session)
 
-        old_analyser = entity.analyser
-        old_quality = entity.analyser_quality
-        if old_quality is None:
-            old_quality = 0
-
-        entity.analyser = analyser.get_identifier()
-        entity.analyser_quality = analyser.get_quality()
-        new_text = analyser.find_text(image_data)
-
-        if (new_text is None or len(new_text) <= 0) and entity.text is not None and len(entity.text) > 0:
-            LOGGER.debug("Ignoring new analysis text because it would delete it")
-        else:
-            entity.text = new_text
-
-        self._persistence.update(entity, image_data)
-        LOGGER.debug(
-            "Updated analysis of '{}' with '{}' (was '{}') with a quality improvement of {} ({} -> {}): {}".format(
-                entity.url, analyser.get_identifier(), old_analyser, entity.analyser_quality - old_quality,
-                old_quality,
-                entity.analyser_quality,
-                format_for_single_line_log(entity.text)))
-
-        self._update_stats()
-
-    def _update_stats(self):
+    def _update_stats(self, session):
         for analyser in self._image_analysers:
-            remaining = remaining_capacity(analyser, self._persistence)
+            remaining = remaining_capacity(session, analyser, self._persistence)
             ANALYSER_CAPACITY.labels(name=analyser.get_identifier()).set(remaining)

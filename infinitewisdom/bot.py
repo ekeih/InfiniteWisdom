@@ -29,7 +29,7 @@ from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANALYSIS_TYPE_HUMAN, COMMAND_FORCE_ANALYSIS, \
     REPLY_COMMAND_INFO, COMMAND_INSPIRE, REPLY_COMMAND_TEXT, COMMAND_STATS, COMMAND_VERSION, COMMAND_COMMANDS, \
     COMMAND_CONFIG
-from infinitewisdom.persistence import Image, ImageDataPersistence
+from infinitewisdom.persistence import Image, ImageDataPersistence, _session_scope
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
 from infinitewisdom.util import send_photo, send_message, cryptographic_hash
 
@@ -54,7 +54,8 @@ def requires_image_reply(func):
         chat_id = message.chat_id
         reply_to_message = message.reply_to_message
 
-        entity = self._find_entity_for_message(bot.id, reply_to_message)
+        with _session_scope(False) as session:
+            entity = self._find_entity_for_message(session, bot.id, reply_to_message)
         if entity is None:
             send_message(bot, chat_id,
                          ":exclamation: You must directly reply to an image send by this bot to use reply commands.",
@@ -209,32 +210,33 @@ class InfiniteWisdomBot:
         message = update.effective_message
         chat_id = update.effective_chat.id
 
-        if image_hash is not None:
-            entity = self._persistence.find_by_image_hash(image_hash)
-        elif message.reply_to_message is not None:
-            reply_to_message = message.reply_to_message
+        with _session_scope() as session:
+            if image_hash is not None:
+                entity = self._persistence.find_by_image_hash(session, image_hash)
+            elif message.reply_to_message is not None:
+                reply_to_message = message.reply_to_message
 
-            entity = self._find_entity_for_message(bot.id, reply_to_message)
-        else:
+                entity = self._find_entity_for_message(session, bot.id, reply_to_message)
+            else:
+                send_message(bot, chat_id,
+                             ":exclamation: Missing image reply or image hash argument".format(image_hash),
+                             reply_to=message.message_id)
+                return
+
+            if entity is None:
+                send_message(bot, chat_id,
+                             ":exclamation: Image entity not found".format(image_hash),
+                             reply_to=message.message_id)
+                return
+
+            entity.analyser = None
+            entity.analyser_quality = None
+            self._persistence.update(session, entity)
             send_message(bot, chat_id,
-                         ":exclamation: Missing image reply or image hash argument".format(image_hash),
+                         ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
                          reply_to=message.message_id)
-            return
 
-        if entity is None:
-            send_message(bot, chat_id,
-                         ":exclamation: Image entity not found".format(image_hash),
-                         reply_to=message.message_id)
-            return
-
-        entity.analyser = None
-        entity.analyser_quality = None
-        self._persistence.update(entity)
-        send_message(bot, chat_id,
-                     ":wrench: Reset analyser data for image with hash: {})".format(entity.image_hash),
-                     reply_to=message.message_id)
-
-    def _find_entity_for_message(self, bot_id, message):
+    def _find_entity_for_message(self, session, bot_id, message):
         """
         Tries to find an entity for a given message
         :param bot_id: the id of this bot
@@ -252,7 +254,7 @@ class InfiniteWisdomBot:
 
         for attachment in message.effective_attachment:
             telegram_file_id = attachment.file_id
-            entity = self._persistence.find_by_telegram_file_id(telegram_file_id)
+            entity = self._persistence.find_by_telegram_file_id(session, telegram_file_id)
             if entity is not None:
                 break
 
@@ -366,7 +368,8 @@ class InfiniteWisdomBot:
         entity_of_reply.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
         entity_of_reply.analyser_quality = 1.0
         entity_of_reply.text = text
-        self._persistence.update(entity_of_reply)
+        with _session_scope() as session:
+            self._persistence.update(session, entity_of_reply)
         send_message(bot, chat_id,
                      ":wrench: Updated text for referenced image to '{}' (Hash: {})".format(entity_of_reply.text,
                                                                                             entity_of_reply.image_hash),
@@ -394,10 +397,11 @@ class InfiniteWisdomBot:
             LOGGER.debug("Ignoring edited delete command")
             return
 
-        self._persistence.delete(entity_of_reply)
-        send_message(bot, chat_id,
-                     "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
-                     reply_to=message.message_id)
+        with _session_scope() as session:
+            self._persistence.delete(session, entity_of_reply)
+            send_message(bot, chat_id,
+                         "Deleted referenced image from persistence (Hash: {})".format(entity_of_reply.image_hash),
+                         reply_to=message.message_id)
 
     @command(
         name=COMMAND_COMMANDS,
@@ -450,10 +454,11 @@ class InfiniteWisdomBot:
             offset = int(offset)
         badge_size = self._config.TELEGRAM_INLINE_BADGE_SIZE.value
 
-        if len(query) > 0:
-            entities = self._persistence.find_by_text(query, badge_size, offset)
-        else:
-            entities = self._persistence.get_random(page_size=badge_size)
+        with _session_scope() as session:
+            if len(query) > 0:
+                entities = self._persistence.find_by_text(session, query, badge_size, offset)
+            else:
+                entities = self._persistence.get_random(session, page_size=badge_size)
 
         results = list(map(lambda x: self._entity_to_inline_query_result(x), entities))
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
@@ -486,29 +491,32 @@ class InfiniteWisdomBot:
         bot = context.bot
         chat_id = update.effective_chat.id
         bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
-        entity = self._persistence.get_random()
-        LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
 
-        caption = None
-        if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
-            caption = entity.text
+        with _session_scope() as session:
 
-        telegram_file_ids_for_current_bot = self.find_telegram_file_ids_for_current_bot(bot.token, entity)
-        if len(telegram_file_ids_for_current_bot) > 0:
-            file_ids = send_photo(bot=bot, chat_id=chat_id, file_id=telegram_file_ids_for_current_bot[0].id,
-                                  caption=caption)
-            bot_token = self._persistence.get_bot_token(bot.token)
+            entity = self._persistence.get_random(session)
+            LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
+
+            caption = None
+            if self._config.TELEGRAM_CAPTION_IMAGES_WITH_TEXT.value:
+                caption = entity.text
+
+            telegram_file_ids_for_current_bot = self.find_telegram_file_ids_for_current_bot(bot.token, entity)
+            if len(telegram_file_ids_for_current_bot) > 0:
+                file_ids = send_photo(bot=bot, chat_id=chat_id, file_id=telegram_file_ids_for_current_bot[0].id,
+                                      caption=caption)
+                bot_token = self._persistence.get_bot_token(session, bot.token)
+                for file_id in file_ids:
+                    entity.add_file_id(bot_token, file_id)
+                self._persistence.update(session, entity)
+                return
+
+            image_bytes = self._persistence.get_image_data(entity)
+            file_ids = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
+            bot_token = self._persistence.get_bot_token(session, bot.token)
             for file_id in file_ids:
                 entity.add_file_id(bot_token, file_id)
-            self._persistence.update(entity)
-            return
-
-        image_bytes = self._persistence._image_data_store.get(entity.image_hash)
-        file_ids = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
-        bot_token = self._persistence.get_bot_token(bot.token)
-        for file_id in file_ids:
-            entity.add_file_id(bot_token, file_id)
-        self._persistence.update(entity, image_bytes)
+            self._persistence.update(session, entity, image_bytes)
 
     def _entity_to_inline_query_result(self, entity: Image):
         """

@@ -71,7 +71,7 @@ class ImageDataStore:
                 if os.path.exists(file_path):
                     os.remove(file_path)
                 if os.path.exists(folder) and len(os.listdir(folder)) == 0:
-                    os.remove(folder)
+                    os.rmdir(folder)
 
                 LOGGER.debug("Image data removed: {}".format(image_hash))
                 return
