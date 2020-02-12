@@ -44,7 +44,7 @@ class BotToken(Base):
     __tablename__ = 'bot_tokens'
 
     id = Column(Integer, primary_key=True)
-    hashed_token = Column(String, index=True, unique=True)
+    hashed_token = Column(String, unique=True)
     telegram_file_ids = relationship("TelegramFileId",
                                      secondary=association_table,
                                      back_populates="bot_tokens")
@@ -154,7 +154,8 @@ class SQLAlchemyPersistence:
         with _session_scope() as session:
             LOGGER.debug("SQLAlchemy persistence loaded: {} entities".format(self.count(session)))
 
-    def _migrate_db(self, url: str):
+    @staticmethod
+    def _migrate_db(url: str):
         from alembic.config import Config
         import alembic.command
 
@@ -164,7 +165,8 @@ class SQLAlchemyPersistence:
 
         alembic.command.upgrade(config, 'head')
 
-    def get_or_add_bot_token(self, session: Session, bot_token: str) -> BotToken:
+    @staticmethod
+    def get_or_add_bot_token(session: Session, bot_token: str) -> BotToken:
         hashed_bot_token = cryptographic_hash(bot_token)
         entity = session.query(BotToken).filter_by(hashed_token=hashed_bot_token).first()
         if entity is not None:
@@ -175,35 +177,42 @@ class SQLAlchemyPersistence:
         session.refresh(bot_token_entity)
         return bot_token_entity
 
-    def get_all(self, session: Session) -> [Image]:
+    @staticmethod
+    def get_all(session: Session) -> [Image]:
         return session.query(Image).order_by(Image.created.desc()).all()
 
-    def add_all(self, session: Session, entities: [Image]):
+    @staticmethod
+    def add_all(session: Session, entities: [Image]):
         session.add_all(entities)
 
-    def add(self, session: Session, image: Image):
+    @staticmethod
+    def add(session: Session, image: Image):
         session.add(image)
         session.commit()
         session.refresh(image)
         return image
 
-    def get_random(self, session: Session, page_size: int = None) -> Image or [Image]:
+    @staticmethod
+    def get_random(session: Session, page_size: int = None) -> Image or [Image]:
         query = session.query(Image).order_by(func.random()).limit(page_size)
         if page_size is None:
             return query.first()
         else:
             return query.all()
 
-    def find_by_image_hash(self, session: Session, image_hash: str) -> Image or None:
+    @staticmethod
+    def find_by_image_hash(session: Session, image_hash: str) -> Image or None:
         return session.query(Image).filter_by(image_hash=image_hash).first()
 
     def find_by_url(self, session: Session, url: str) -> [Image]:
         return session.query(Image).filter_by(url=url).all()
 
-    def find_by_telegram_file_id(self, session: Session, telegram_file_id: str) -> [Image]:
+    @staticmethod
+    def find_by_telegram_file_id(session: Session, telegram_file_id: str) -> [Image]:
         return session.query(Image).filter(Image.telegram_file_ids.any(id=telegram_file_id)).first()
 
-    def find_by_text(self, session: Session, text: str = None, limit: int = None, offset: int = None) -> [Image]:
+    @staticmethod
+    def find_by_text(session: Session, text: str = None, limit: int = None, offset: int = None) -> [Image]:
         if limit is None:
             limit = 16
 
@@ -235,11 +244,13 @@ class SQLAlchemyPersistence:
                 Image.analyser_quality,
                 Image.created)
 
-    def find_without_image_data(self, session: Session) -> Image or None:
+    @staticmethod
+    def find_without_image_data(session: Session) -> Image or None:
         return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
             Image.created).all()
 
-    def find_not_uploaded(self, session: Session, bot_token: str) -> Image or None:
+    @staticmethod
+    def find_not_uploaded(session: Session, bot_token: str) -> Image or None:
         hashed_bot_token = cryptographic_hash(bot_token)
         return session.query(Image).filter(
             and_(
@@ -252,36 +263,44 @@ class SQLAlchemyPersistence:
         # so we have to omit this for now
         # .order_by(Image.created)
 
-    def count(self, session: Session) -> int:
-        return session.query(Image).count()
+    @staticmethod
+    def count(session: Session) -> int:
+        return session.query(Image.id).count()
 
-    def update(self, session: Session, image: Image) -> None:
+    @staticmethod
+    def update(session: Session, image: Image) -> None:
         old = session.query(Image).filter_by(id=image.id).first()
         if old is None:
             raise ValueError("Tried to update non-existing entity: {}".format(image))
         session.merge(image)
 
-    def count_items_this_month(self, session: Session, analyser: str) -> int:
+    @staticmethod
+    def count_items_this_month(session: Session, analyser: str) -> int:
         return session.query(Image).filter(Image.analyser == analyser).filter(
             Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
 
-    def delete(self, session: Session, entity_id: int) -> None:
+    @staticmethod
+    def delete(session: Session, entity_id: int) -> None:
         session.query(Image).filter_by(id=entity_id).delete()
 
     def clear(self) -> None:
         raise NotImplementedError()
 
-    def count_items_with_telegram_upload(self, session: Session, bot_token: str) -> int:
+    @staticmethod
+    def count_items_with_telegram_upload(session: Session, bot_token: str) -> int:
         hashed_bot_token = cryptographic_hash(bot_token)
         return session.query(Image).filter(
             and_(Image.telegram_file_ids.any(
                 TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token]))))).count()
 
-    def count_items_by_analyser(self, session: Session, analyser_id: str) -> int:
+    @staticmethod
+    def count_items_by_analyser(session: Session, analyser_id: str) -> int:
         return session.query(Image).filter(Image.analyser == analyser_id).count()
 
-    def count_items_with_text(self, session: Session) -> int:
+    @staticmethod
+    def count_items_with_text(session: Session) -> int:
         return session.query(Image).filter(func.length(Image.text) > 0).count()
 
-    def count_items_with_image_data(self, session: Session) -> int:
+    @staticmethod
+    def count_items_with_image_data(session: Session) -> int:
         return session.query(Image).filter(Image.image_hash.isnot(None)).count()

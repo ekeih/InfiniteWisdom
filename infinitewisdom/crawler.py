@@ -72,13 +72,11 @@ class Crawler(RegularIntervalWorker):
                         existing.url, url, image_hash))
                 existing.url = url
                 self._persistence.update(session, existing, image_data)
-                session.commit()
             self.URL_CACHE[url] = True
             return None
 
         entity = Image(url=url, created=time.time())
         self._persistence.add(session, entity, image_data)
-        session.commit()
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(session), url))
 
         self.URL_CACHE[url] = True

@@ -66,7 +66,6 @@ class TelegramUploader(RegularIntervalWorker):
                         "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
                         e)
                     self._persistence.delete(session, entity)
-                session.commit()
                 return
 
             file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
@@ -74,7 +73,6 @@ class TelegramUploader(RegularIntervalWorker):
             for file_id in file_ids:
                 entity.add_file_id(bot_token, file_id)
             self._persistence.update(session, entity, image_data)
-            session.commit()
             LOGGER.debug(
                 "Send image '{}' to chat '{}' and updated entity with file_id {}.".format(
                     entity.url, self._chat_id, file_ids))
