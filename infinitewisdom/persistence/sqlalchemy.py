@@ -254,6 +254,8 @@ class SQLAlchemyPersistence:
         hashed_bot_token = cryptographic_hash(bot_token)
         image_ids = session.query(Image.id).all()
         bot_token_entity = session.query(BotToken).filter_by(hashed_token=hashed_bot_token).first()
+        if bot_token_entity is None:
+            return []
         uploaded_image_ids = set(map(lambda x: x.image_id, bot_token_entity.telegram_file_ids))
 
         x = image_ids
