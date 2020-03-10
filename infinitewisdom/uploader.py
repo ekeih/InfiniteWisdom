@@ -62,23 +62,19 @@ class TelegramUploader(RegularIntervalWorker):
             image_id = self._not_uploaded_ids.pop()
 
             entity = self._persistence.get_image(session, image_id)
-            if entity is None:
-                # sleep for a longer time period to reduce load
-                time.sleep(60)
-                return
-
             image_data = self._persistence.get_image_data(entity)
             if image_data is None:
                 LOGGER.warning("Missing image data for entity, trying to download: {}".format(entity))
                 try:
                     image_data = download_image_bytes(entity.url)
                     self._persistence.update(session, entity, image_data)
+                    entity = self._persistence.get_image(session, image_id)
                 except Exception as e:
                     LOGGER.error(
                         "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
                         e)
                     self._persistence.delete(session, entity)
-                return
+                    return
 
             file_ids = send_photo(bot=self._bot, chat_id=self._chat_id, image_data=image_data)
             bot_token = self._persistence.get_bot_token(session, self._bot.token)
