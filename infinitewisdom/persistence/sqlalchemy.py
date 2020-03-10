@@ -15,10 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
 import time
+from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime
+from typing import List
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table, or_
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 
@@ -26,7 +28,6 @@ from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.util import cryptographic_hash
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 Base = declarative_base()
 
@@ -148,7 +149,7 @@ class SQLAlchemyPersistence:
         self._migrate_db(url)
 
         global _sessionmaker
-        engine = create_engine(url, echo=False)
+        engine = create_engine(url)
         _sessionmaker.configure(bind=engine)
 
         with _session_scope() as session:
@@ -176,6 +177,10 @@ class SQLAlchemyPersistence:
         session.commit()
         session.refresh(bot_token_entity)
         return bot_token_entity
+
+    @staticmethod
+    def get(session: Session, entity_id: int):
+        return session.query(Image).get(entity_id)
 
     @staticmethod
     def get_all(session: Session) -> [Image]:
@@ -250,22 +255,31 @@ class SQLAlchemyPersistence:
             Image.created).all()
 
     @staticmethod
-    def find_not_uploaded(session: Session, bot_token: str) -> Image or None:
+    def get_not_uploaded_image_ids(session: Session, bot_token: str) -> List[int]:
         hashed_bot_token = cryptographic_hash(bot_token)
-        return session.query(Image).filter(
-            and_(
-                or_(~Image.telegram_file_ids.any(),
-                    ~Image.telegram_file_ids.any(
-                        TelegramFileId.bot_tokens.any(BotToken.hashed_token.in_([hashed_bot_token])))),
-                Image.image_hash.isnot(None))
-        ).first()
-        # OrderBy causes HUGE load on the postgres process (100% over several minutes without any sign of finishing up)
-        # so we have to omit this for now
-        # .order_by(Image.created)
+        image_ids = session.query(Image.id).all()
+        bot_token_entity = session.query(BotToken).filter_by(hashed_token=hashed_bot_token).first()
+        uploaded_image_ids = set(map(lambda x: x.image_id, bot_token_entity.telegram_file_ids))
+
+        x = image_ids
+        y = uploaded_image_ids
+        remaining = Counter(y)
+
+        # out would be the full substraction
+        out = []
+        for val in x:
+            if remaining[val]:
+                remaining[val] -= 1
+            else:
+                out.append(val)
+
+        # TODO: this still takes about 30 seconds and shifts part of the load to the client,
+        #  but its the best we have now
+        return out
 
     @staticmethod
     def count(session: Session) -> int:
-        return session.query(Image.id).count()
+        return session.query(func.count(Image.id)).scalar()
 
     @staticmethod
     def update(session: Session, image: Image) -> None:

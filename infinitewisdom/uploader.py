@@ -25,7 +25,6 @@ from infinitewisdom.stats import UPLOADER_TIME
 from infinitewisdom.util import send_photo, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class TelegramUploader(RegularIntervalWorker):
@@ -40,16 +39,29 @@ class TelegramUploader(RegularIntervalWorker):
         self._bot = bot
         self._chat_id = config.UPLOADER_CHAT_ID.value
 
+        with _session_scope() as session:
+            self._not_uploaded_ids = set(self._persistence.get_not_uploaded_image_ids(session, self._bot.token))
+
     def start(self):
         if self._chat_id is None:
             LOGGER.debug("No chat id configured, not starting uploader.")
             return
         super().start()
 
+    def add_image_to_queue(self, image_entity_id: int):
+        self._not_uploaded_ids.add(image_entity_id)
+
     @UPLOADER_TIME.time()
     def _run(self):
         with _session_scope() as session:
-            entity = self._persistence.find_not_uploaded(session, self._bot.token)
+            if len(self._not_uploaded_ids) <= 0:
+                # sleep for a longer time period to reduce load
+                time.sleep(60)
+                return
+
+            image_id = self._not_uploaded_ids.pop()
+
+            entity = self._persistence.get_image(session, image_id)
             if entity is None:
                 # sleep for a longer time period to reduce load
                 time.sleep(60)

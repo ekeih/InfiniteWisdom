@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
+from typing import List
 
 from sqlalchemy.orm import Session
 
@@ -27,7 +28,6 @@ from infinitewisdom.stats import POOL_SIZE, TELEGRAM_ENTITIES_COUNT, IMAGE_ANALY
 from infinitewisdom.util import create_hash
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class ImageDataPersistence:
@@ -141,13 +141,13 @@ class ImageDataPersistence:
         """
         return self._database.find_without_image_data(session)
 
-    def find_not_uploaded(self, session: Session, bot_token: str) -> Image or None:
+    def get_not_uploaded_image_ids(self, session: Session, bot_token: str) -> List[int]:
         """
         Finds an image that has not yet been uploaded to telegram servers
         :param bot_token: the bot token
         :return: entity or None
         """
-        return self._database.find_not_uploaded(session, bot_token)
+        return self._database.get_not_uploaded_image_ids(session, bot_token)
 
     def count(self, session) -> int:
         """
@@ -155,6 +155,14 @@ class ImageDataPersistence:
         :return: total count
         """
         return self._database.count(session)
+
+    def get_image(self, session: Session, entity_id: int):
+        """
+        Get an image entity by id
+        :param entity_id: entity id
+        :return:
+        """
+        return self._database.get(session, entity_id)
 
     def update(self, session: Session, entity: Image, image_data: bytes or None = None) -> None:
         """

@@ -26,7 +26,6 @@ from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.const import TELEGRAM_CAPTION_LENGTH_LIMIT, REQUESTS_TIMEOUT
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 def download_image_bytes(url: str) -> bytes:
@@ -89,22 +88,6 @@ def select_best_available_analyser(session, analysers: [ImageAnalyser], persiste
         return None
     else:
         return sorted(available, key=lambda x: (-x.get_quality(), -remaining_capacity(session, x, persistence)))[0]
-
-
-def parse_telegram_command(text: str) -> (str, [str]):
-    """
-    Parses the given message to a command and its arguments
-    :param text: the text to parse
-    :return: the command and its argument list
-    """
-    if text is None or len(text) <= 0:
-        return None, [0]
-
-    if " " not in text:
-        return text[1:], None
-    else:
-        command, rest = text.split(" ", 1)
-        return command[1:], rest
 
 
 def send_photo(bot: Bot, chat_id: str, file_id: int or None = None, image_data: bytes or None = None,

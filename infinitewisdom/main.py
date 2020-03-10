@@ -24,7 +24,6 @@ sys.path.append(parent_dir)
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 if __name__ == '__main__':
     from prometheus_client import start_http_server
@@ -39,6 +38,9 @@ if __name__ == '__main__':
     from infinitewisdom.uploader import TelegramUploader
 
     config = AppConfig()
+
+    log_level = logging._nameToLevel.get(str(config.LOG_LEVEL.value).upper(), config.LOG_LEVEL.default)
+    logging.getLogger("infinitewisdom").setLevel(log_level)
 
     LOGGER.debug("Config:\n{}".format(config.print(TomlFormatter())))
 
@@ -61,9 +63,9 @@ if __name__ == '__main__':
     start_http_server(config.STATS_PORT.value)
 
     wisdom_bot = InfiniteWisdomBot(config, persistence, image_analysers)
-    crawler = Crawler(config, persistence, image_analysers)
-    analysis_worker = AnalysisWorker(config, persistence, image_analysers)
     telegram_uploader = TelegramUploader(config, persistence, wisdom_bot._updater.bot)
+    crawler = Crawler(config, persistence, telegram_uploader, image_analysers)
+    analysis_worker = AnalysisWorker(config, persistence, image_analysers)
 
     crawler.start()
     analysis_worker.start()

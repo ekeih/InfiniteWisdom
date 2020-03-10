@@ -16,6 +16,7 @@
 
 import logging
 import os
+import re
 
 from container_app_conf import ConfigBase
 from container_app_conf.entry.bool import BoolConfigEntry
@@ -41,7 +42,6 @@ class AppConfig(ConfigBase):
     """
 
     LOGGER = logging.getLogger(__name__)
-    LOGGER.setLevel(logging.DEBUG)
 
     def __new__(cls, *args, **kwargs):
         yaml_source = YamlSource(CONFIG_FILE_NAME)
@@ -50,6 +50,16 @@ class AppConfig(ConfigBase):
             yaml_source
         ]
         return super(AppConfig, cls).__new__(cls, data_sources=data_sources)
+
+    LOG_LEVEL = StringConfigEntry(
+        description="Log level",
+        key_path=[
+            CONFIG_NODE_ROOT,
+            "log_level"
+        ],
+        regex=re.compile(f" {'|'.join(logging._nameToLevel.keys())}", flags=re.IGNORECASE),
+        default="DEBUG",
+    )
 
     TELEGRAM_BOT_TOKEN = StringConfigEntry(
         key_path=[

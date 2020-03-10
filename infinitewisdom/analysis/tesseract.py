@@ -20,7 +20,6 @@ from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.stats import TESSERACT_FIND_TEXT_TIME
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class Tesseract(ImageAnalyser):

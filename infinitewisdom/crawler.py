@@ -25,10 +25,10 @@ from infinitewisdom.const import REQUESTS_TIMEOUT
 from infinitewisdom.persistence import ImageDataPersistence
 from infinitewisdom.persistence.sqlalchemy import Image, _session_scope
 from infinitewisdom.stats import CRAWLER_TIME
+from infinitewisdom.uploader import TelegramUploader
 from infinitewisdom.util import download_image_bytes, create_hash
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class Crawler(RegularIntervalWorker):
@@ -37,7 +37,8 @@ class Crawler(RegularIntervalWorker):
     """
     URL_CACHE = {}
 
-    def __init__(self, config: AppConfig, persistence: ImageDataPersistence, image_analysers: [ImageAnalyser]):
+    def __init__(self, config: AppConfig, persistence: ImageDataPersistence,
+                 telegram_uploader: TelegramUploader, image_analysers: [ImageAnalyser]):
         """
         Creates a crawler instance.
         :param persistence: crawled data is added here
@@ -45,6 +46,7 @@ class Crawler(RegularIntervalWorker):
         super().__init__(config.CRAWLER_INTERVAL.value)
         self._persistence = persistence
         self._image_analysers = image_analysers
+        self._telegram_uploader = telegram_uploader
 
     @CRAWLER_TIME.time()
     def _run(self):
@@ -72,11 +74,13 @@ class Crawler(RegularIntervalWorker):
                         existing.url, url, image_hash))
                 existing.url = url
                 self._persistence.update(session, existing, image_data)
+                self._telegram_uploader.add_image_to_queue(existing.id)
             self.URL_CACHE[url] = True
             return None
 
         entity = Image(url=url, created=time.time())
         self._persistence.add(session, entity, image_data)
+        self._telegram_uploader.add_image_to_queue(entity.id)
         LOGGER.debug('Added image #{} with URL: "{}"'.format(self._persistence.count(session), url))
 
         self.URL_CACHE[url] = True

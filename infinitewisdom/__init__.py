@@ -17,7 +17,6 @@ import logging
 import threading
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class RegularIntervalWorker:

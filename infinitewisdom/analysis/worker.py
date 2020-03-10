@@ -25,7 +25,6 @@ from infinitewisdom.util import select_best_available_analyser, format_for_singl
     download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
 
 
 class AnalysisWorker(RegularIntervalWorker):

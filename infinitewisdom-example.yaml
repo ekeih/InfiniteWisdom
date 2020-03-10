@@ -1,6 +1,7 @@
 ---
 
 InfiniteWisdom:
+  log_level: debug
   telegram:
     admin_usernames:
       - "myadminuser"
