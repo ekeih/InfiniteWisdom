@@ -458,9 +458,9 @@ class InfiniteWisdomBot:
             else:
                 entities = self._persistence.get_random(session, page_size=badge_size)
 
-        results = list(map(lambda x: self._entity_to_inline_query_result(x), entities))
+            results = list(map(lambda x: self._entity_to_inline_query_result(x), entities))
+        
         LOGGER.debug('Inline query "{}": {}+{} results'.format(query, len(results), offset))
-
         if len(results) > 0:
             new_offset = offset + badge_size
         else:
