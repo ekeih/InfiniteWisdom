@@ -250,11 +250,6 @@ class SQLAlchemyPersistence:
                 Image.created)
 
     @staticmethod
-    def find_without_image_data(session: Session) -> Image or None:
-        return session.query(Image).filter(Image.image_hash.is_(None)).order_by(
-            Image.created).all()
-
-    @staticmethod
     def get_not_uploaded_image_ids(session: Session, bot_token: str) -> List[int]:
         hashed_bot_token = cryptographic_hash(bot_token)
         image_ids = session.query(Image.id).all()

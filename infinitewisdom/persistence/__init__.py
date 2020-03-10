@@ -134,13 +134,6 @@ class ImageDataPersistence:
         """
         return self._database.find_first_non_optimal(session, target_quality)
 
-    def find_without_image_data(self, session: Session) -> [Image]:
-        """
-        Finds entities without image data
-        :return: list of entities without image data
-        """
-        return self._database.find_without_image_data(session)
-
     def get_not_uploaded_image_ids(self, session: Session, bot_token: str) -> List[int]:
         """
         Finds an image that has not yet been uploaded to telegram servers
