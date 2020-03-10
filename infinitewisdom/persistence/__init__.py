@@ -222,7 +222,6 @@ class ImageDataPersistence:
         :param text: text to analyse
         :return: True if the text contains all of the given words, false otherwise
         """
-
         if text is None:
             return False
         text = text.lower()
