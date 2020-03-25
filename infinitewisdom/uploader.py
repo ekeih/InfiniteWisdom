@@ -21,7 +21,7 @@ from telegram import Bot
 from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence, _session_scope
-from infinitewisdom.stats import UPLOADER_TIME
+from infinitewisdom.stats import UPLOADER_TIME, UPLOADER_QUEUE_LENGTH
 from infinitewisdom.util import send_photo, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
@@ -54,7 +54,9 @@ class TelegramUploader(RegularIntervalWorker):
     @UPLOADER_TIME.time()
     def _run(self):
         with _session_scope() as session:
-            if len(self._not_uploaded_ids) <= 0:
+            queue_length = len(self._not_uploaded_ids)
+            UPLOADER_QUEUE_LENGTH.set(queue_length)
+            if queue_length <= 0:
                 # sleep for a longer time period to reduce load
                 time.sleep(60)
                 return

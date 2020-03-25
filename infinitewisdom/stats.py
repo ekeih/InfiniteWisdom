@@ -45,6 +45,9 @@ CRAWLER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="crawler")
 UPLOADER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="uploader")
 ANALYSER_TIME = REGULAR_INTERVAL_WORKER_TIME.labels(name="analyser")
 
+UPLOADER_QUEUE_LENGTH = Gauge('uploader_queue_length',
+                              'Number of entity ids in the uploader worker queue')
+
 ANALYSER_FIND_TEXT_TIME = Summary('analyser_find_text_processing_seconds',
                                   'Time spent to find text for a given image',
                                   ['name'])
