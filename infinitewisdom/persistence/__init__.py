@@ -132,7 +132,7 @@ class ImageDataPersistence:
         :param target_quality: the target quality to reach
         :return: a non-optimal entity or None
         """
-        return self._database.find_first_non_optimal(session, target_quality)
+        return self._database.find_all_non_optimal(session, target_quality)
 
     def get_not_uploaded_image_ids(self, session: Session, bot_token: str) -> List[int]:
         """
