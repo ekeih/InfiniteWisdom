@@ -79,6 +79,7 @@ class AnalysisWorker(RegularIntervalWorker):
                 self._not_optimal_ids = set(self._persistence.find_non_optimal(session, self._target_quality))
                 return
 
+            entity = None
             while entity is None:
                 if len(self._not_optimal_ids) <= 0:
                     return
