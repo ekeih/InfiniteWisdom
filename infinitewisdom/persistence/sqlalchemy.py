@@ -227,27 +227,19 @@ class SQLAlchemyPersistence:
         return session.query(Image).filter(and_(*filters)).limit(limit).offset(offset).all()
 
     def find_all_non_optimal(self, session: Session, target_quality: int, limit: int = None) -> [Image]:
-        if limit is None:
-            limit = 1000
-
-        return self._find_non_optimal_query(session, target_quality).limit(limit).all()
-
-    def find_first_non_optimal(self, session: Session, target_quality: float) -> Image or None:
-        return self._find_non_optimal_query(session, target_quality).first()
-
-    @staticmethod
-    def _find_non_optimal_query(session: Session, target_quality: float):
-        q1 = session.query(Image).filter(Image.analyser_quality.is_(None)).order_by(
+        never_analysed = session.query(Image.id).filter(Image.analyser_quality.is_(None)).order_by(
             func.length(Image.text) > 0,
-            Image.created)
-        if q1.count() > 0:
-            return q1
-        else:
-            return session.query(Image).filter(and_(Image.analyser_quality.isnot(None),
-                                                    Image.analyser_quality < target_quality)).order_by(
-                func.length(Image.text) > 0,
-                Image.analyser_quality,
-                Image.created)
+            Image.created).all()
+
+        improvement_possible = session.query(Image.id).filter(
+            and_(Image.analyser_quality.isnot(None),
+                 Image.analyser_quality < target_quality)
+        ).order_by(
+            func.length(Image.text) > 0,
+            Image.analyser_quality,
+            Image.created).all()
+
+        return never_analysed + improvement_possible
 
     @staticmethod
     def get_not_uploaded_image_ids(session: Session, bot_token: str) -> List[int]:

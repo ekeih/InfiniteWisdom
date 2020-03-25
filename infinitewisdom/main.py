@@ -64,8 +64,8 @@ if __name__ == '__main__':
 
     wisdom_bot = InfiniteWisdomBot(config, persistence, image_analysers)
     telegram_uploader = TelegramUploader(config, persistence, wisdom_bot._updater.bot)
-    crawler = Crawler(config, persistence, telegram_uploader, image_analysers)
     analysis_worker = AnalysisWorker(config, persistence, image_analysers)
+    crawler = Crawler(config, persistence, telegram_uploader, image_analysers, analysis_worker)
 
     crawler.start()
     analysis_worker.start()

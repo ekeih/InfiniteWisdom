@@ -51,6 +51,9 @@ class AnalysisWorker(RegularIntervalWorker):
             self._target_quality = sorted(self._image_analysers, key=lambda x: x.get_quality(), reverse=True)[
                 0].get_quality()
 
+        with _session_scope() as session:
+            self._not_optimal_ids = set(self._persistence.find_non_optimal(session, self._target_quality))
+
     def start(self):
         if len(self._image_analysers) <= 0:
             LOGGER.warning("No image analyser provided, not starting.")
@@ -61,18 +64,30 @@ class AnalysisWorker(RegularIntervalWorker):
 
         super().start()
 
+    def add_image_to_queue(self, image_entity_id: int):
+        self._not_optimal_ids.add(image_entity_id)
+
     @ANALYSER_TIME.time()
     def _run(self):
         """
         The job that is executed regularly by this crawler
         """
         with _session_scope() as session:
-            entity = self._persistence.find_non_optimal(session, self._target_quality)
-            if entity is None:
-                # nothing to analyse
-                # sleep for a longer time period to reduce db load
+            if len(self._not_optimal_ids) <= 0:
+                # sleep for a longer time period to reduce load
                 time.sleep(60)
+                self._not_optimal_ids = set(self._persistence.find_non_optimal(session, self._target_quality))
                 return
+
+            while entity is None:
+                if len(self._not_optimal_ids) <= 0:
+                    return
+                image_id = self._not_optimal_ids.pop()
+                entity = self._persistence.get_image(session, image_id)
+                if entity is None:
+                    LOGGER.warning(f"Image id scheduled for analysis not found: {image_id}")
+                    # the entity has probably been removed in the meantime
+                    continue
 
             analyser = select_best_available_analyser(session, self._image_analysers, self._persistence)
             if analyser is None:
