@@ -30,6 +30,8 @@ IMAGE_ANALYSIS_TYPE_COUNT = Gauge('image_analysis_type_count',
                                   ['type'])
 IMAGE_ANALYSIS_HAS_TEXT_COUNT = Gauge('image_analysis_has_text_count',
                                       'Number of entities that have a text')
+IMAGE_ANALYSIS_QUEUE_LENGTH = Gauge('image_analysis_queue_length',
+                                    'Number of entity ids in the analyser worker queue')
 START_TIME = Summary('start_processing_seconds', 'Time spent in the /start handler')
 INSPIRE_TIME = Summary('inspire_processing_seconds', 'Time spent in the /inspire handler')
 INLINE_TIME = Summary('inline_processing_seconds', 'Time spent in the inline query handler')

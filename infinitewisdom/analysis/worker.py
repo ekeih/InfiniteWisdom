@@ -20,7 +20,7 @@ from infinitewisdom import RegularIntervalWorker
 from infinitewisdom.analysis import ImageAnalyser
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.persistence import ImageDataPersistence, _session_scope
-from infinitewisdom.stats import ANALYSER_TIME, ANALYSER_CAPACITY
+from infinitewisdom.stats import ANALYSER_TIME, ANALYSER_CAPACITY, IMAGE_ANALYSIS_QUEUE_LENGTH
 from infinitewisdom.util import select_best_available_analyser, format_for_single_line_log, remaining_capacity, \
     download_image_bytes
 
@@ -73,7 +73,9 @@ class AnalysisWorker(RegularIntervalWorker):
         The job that is executed regularly by this crawler
         """
         with _session_scope() as session:
-            if len(self._not_optimal_ids) <= 0:
+            queue_length = len(self._not_optimal_ids)
+            IMAGE_ANALYSIS_QUEUE_LENGTH.set(queue_length)
+            if queue_length <= 0:
                 # sleep for a longer time period to reduce load
                 time.sleep(60)
                 self._not_optimal_ids = set(self._persistence.find_non_optimal(session, self._target_quality))
@@ -81,9 +83,11 @@ class AnalysisWorker(RegularIntervalWorker):
 
             entity = None
             while entity is None:
-                if len(self._not_optimal_ids) <= 0:
+                if queue_length <= 0:
                     return
                 image_id = self._not_optimal_ids.pop()
+                queue_length -= 1
+                IMAGE_ANALYSIS_QUEUE_LENGTH.set(queue_length)
                 entity = self._persistence.get_image(session, image_id)
                 if entity is None:
                     LOGGER.warning(f"Image id scheduled for analysis not found: {image_id}")
