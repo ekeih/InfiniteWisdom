@@ -64,6 +64,9 @@ class TelegramUploader(RegularIntervalWorker):
             image_id = self._not_uploaded_ids.pop()
 
             entity = self._persistence.get_image(session, image_id)
+            if entity is None:
+                LOGGER.warning("Ignoring missing entity for image_id {}".format(image_id))
+                return
             image_data = self._persistence.get_image_data(entity)
             if image_data is None:
                 LOGGER.warning("Missing image data for entity, trying to download: {}".format(entity))

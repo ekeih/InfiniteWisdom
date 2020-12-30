@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import logging
-from typing import List
 
 from sqlalchemy.orm import Session
+from typing import List
 
 from infinitewisdom.config.config import AppConfig
 from infinitewisdom.const import IMAGE_ANALYSIS_TYPE_TESSERACT, IMAGE_ANALYSIS_TYPE_GOOGLE_VISION, \
@@ -69,6 +69,14 @@ class ImageDataPersistence:
             self._image_data_store.put(image_hash, image_data)
         finally:
             self._update_stats(session)
+
+    def has_image_data(self, entity: Image) -> bool:
+        """
+        Checks if image data for an entity exists
+        :param entity: the entity to get the image for
+        :return: True if it exists, false otherwise
+        """
+        return self._image_data_store.has(entity.image_hash)
 
     def get_image_data(self, entity: Image) -> bytes or None:
         """
@@ -176,7 +184,7 @@ class ImageDataPersistence:
                                                                                 new_hash,
                                                                                 entity.url))
                 entity.image_hash = new_hash
-            if self.get_image_data(entity) is None:
+            if self.has_image_data(entity) is None:
                 self._image_data_store.put(entity.image_hash, image_data)
                 LOGGER.debug("Saved new image data for hash: {}".format(entity.image_hash))
             self._database.update(session, entity)

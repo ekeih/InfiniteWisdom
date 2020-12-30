@@ -32,6 +32,19 @@ class ImageDataStore:
     def __init__(self, base_path: str):
         self._base_path = base_path
 
+    def has(self, image_hash: str) -> bool:
+        """
+        Checks if image data for a given image_hash exists
+        :param image_hash: expected image hash
+        :return: True if data exists, False otherwise
+        """
+        with lock:
+            if image_hash is None:
+                return False
+
+            file_path = self._get_file_path(image_hash)
+            return os.path.exists(file_path)
+
     def get(self, image_hash: str) -> bytes or None:
         """
         Get the image data for a database entity
@@ -42,15 +55,12 @@ class ImageDataStore:
             return self._get(image_hash)
 
     def _get(self, image_hash: str) -> bytes or None:
-        if image_hash is None:
+        if not self.has(image_hash):
             return None
 
         file_path = self._get_file_path(image_hash)
-        if os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                return f.read()
-        else:
-            return None
+        with open(file_path, 'rb') as f:
+            return f.read()
 
     def put(self, image_hash: str, image_data: bytes or None):
         """

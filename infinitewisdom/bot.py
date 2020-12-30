@@ -366,6 +366,10 @@ class InfiniteWisdomBot:
         entity_of_reply.analyser = IMAGE_ANALYSIS_TYPE_HUMAN
         entity_of_reply.analyser_quality = 1.0
         entity_of_reply.text = text
+
+        if entity_of_reply is None:
+            raise AssertionError("Referenced image not found")
+
         with _session_scope() as session:
             self._persistence.update(session, entity_of_reply)
         send_message(bot, chat_id,
@@ -493,6 +497,9 @@ class InfiniteWisdomBot:
         with _session_scope() as session:
 
             entity = self._persistence.get_random(session)
+            if entity is None:
+                raise AssertionError("No entity in database")
+
             LOGGER.debug("Sending random quote '{}' to chat id: {}".format(entity.image_hash, chat_id))
 
             caption = None

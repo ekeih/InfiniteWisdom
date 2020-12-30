@@ -16,13 +16,13 @@
 import logging
 import time
 from collections import Counter
-from contextlib import contextmanager
 from datetime import datetime
-from typing import List
 
+from contextlib import contextmanager
 from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
+from typing import List
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.util import cryptographic_hash
@@ -272,9 +272,6 @@ class SQLAlchemyPersistence:
 
     @staticmethod
     def update(session: Session, image: Image) -> None:
-        old = session.query(Image).filter_by(id=image.id).first()
-        if old is None:
-            raise ValueError("Tried to update non-existing entity: {}".format(image))
         session.merge(image)
 
     @staticmethod
