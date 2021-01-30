@@ -16,13 +16,13 @@
 import logging
 import time
 from collections import Counter
-from datetime import datetime
-
 from contextlib import contextmanager
-from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table
+from datetime import datetime
+from typing import List
+
+from sqlalchemy import create_engine, Column, Integer, String, Float, func, and_, ForeignKey, Table, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
-from typing import List
 
 from infinitewisdom.const import DEFAULT_SQL_PERSISTENCE_URL
 from infinitewisdom.util import cryptographic_hash
@@ -64,6 +64,7 @@ class Image(Base):
     analyser = Column(String)
     analyser_quality = Column(Float)
     created = Column(Float)
+    updated = Column(Float)
     image_hash = Column(String, index=True)
     telegram_file_ids = relationship("TelegramFileId",
                                      back_populates="image",
@@ -74,6 +75,7 @@ class Image(Base):
     def __str__(self):
         return ", ".join(
             ["Created: `{}`".format(datetime.fromtimestamp(self.created)),
+             "Updated: `{}`".format(datetime.fromtimestamp(self.updated)),
              "URL: {}".format(self.url),
              "Telegram file ids: [{}]".format(", ".join(list(map(lambda x: x.id, self.telegram_file_ids)))),
              "Hash: {}".format(self.image_hash),
@@ -272,12 +274,14 @@ class SQLAlchemyPersistence:
 
     @staticmethod
     def update(session: Session, image: Image) -> None:
+        image.updated = time.time()
         session.merge(image)
 
     @staticmethod
     def count_items_this_month(session: Session, analyser: str) -> int:
+        divide = time.time() - 60 * 60 * 24 * 31
         return session.query(Image).filter(Image.analyser == analyser).filter(
-            Image.created > (time.time() - 60 * 60 * 24 * 31)).count()
+            or_(Image.created > divide, Image.updated > divide)).count()
 
     @staticmethod
     def delete(session: Session, entity_id: int) -> None:
