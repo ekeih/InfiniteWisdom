@@ -53,12 +53,19 @@ class GoogleVision(ImageAnalyser):
 
     @GOOGLE_VISION_FIND_TEXT_TIME.time()
     def find_text(self, image: bytes):
-        from google.cloud.vision import types
+        from google.cloud import vision
 
-        image = types.Image(content=image)
+        image = vision.Image(content=image)
 
         # Performs label detection on the image file
         response = self._client.text_detection(image=image)
+
+        if response.error.message:
+            raise Exception(
+                '{}\nFor more info on error messages, check: '
+                'https://cloud.google.com/apis/design/errors'.format(
+                    response.error.message))
+
         text_annotations = response.text_annotations
         # the first annotation contains the whole thing
         if len(text_annotations) > 0:
