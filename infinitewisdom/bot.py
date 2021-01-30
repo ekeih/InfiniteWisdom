@@ -31,7 +31,7 @@ from infinitewisdom.const import COMMAND_START, REPLY_COMMAND_DELETE, IMAGE_ANAL
     COMMAND_CONFIG
 from infinitewisdom.persistence import Image, ImageDataPersistence, _session_scope
 from infinitewisdom.stats import INSPIRE_TIME, INLINE_TIME, START_TIME, CHOSEN_INLINE_RESULTS, format_metrics
-from infinitewisdom.util import send_photo, send_message, cryptographic_hash
+from infinitewisdom.util import send_photo, send_message, cryptographic_hash, download_image_bytes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -494,7 +494,7 @@ class InfiniteWisdomBot:
         chat_id = update.effective_chat.id
         bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
-        with _session_scope() as session:
+        with _session_scope(write=True) as session:
 
             entity = self._persistence.get_random(session)
             if entity is None:
@@ -517,6 +517,18 @@ class InfiniteWisdomBot:
                 return
 
             image_bytes = self._persistence.get_image_data(entity)
+            if image_bytes is None:
+                LOGGER.warning("Missing image data for entity, trying to download: {}".format(entity))
+                try:
+                    image_data = download_image_bytes(entity.url)
+                    self._persistence.update(session, entity, image_data)
+                    entity = self._persistence.get_image(session, entity.id)
+                except Exception as e:
+                    LOGGER.error(
+                        "Error trying to download missing image data for url '{}', deleting entity.".format(entity.url),
+                        e)
+                    self._persistence.delete(session, entity)
+                    return
             file_ids = send_photo(bot=bot, chat_id=chat_id, image_data=image_bytes, caption=caption)
             bot_token = self._persistence.get_bot_token(session, bot.token)
             for file_id in file_ids:
