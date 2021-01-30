@@ -18,7 +18,7 @@
 Holds important constants
 """
 
-__version__ = "4.6.8"
+__version__ = "4.6.9"
 
 TELEGRAM_CAPTION_LENGTH_LIMIT = 200
 
