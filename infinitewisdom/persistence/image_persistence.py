@@ -39,11 +39,14 @@ class ImageDataStore:
         :return: True if data exists, False otherwise
         """
         with lock:
-            if image_hash is None:
-                return False
+            return self._has(image_hash)
 
-            file_path = self._get_file_path(image_hash)
-            return os.path.exists(file_path)
+    def _has(self, image_hash: str) -> bool:
+        if image_hash is None:
+            return False
+
+        file_path = self._get_file_path(image_hash)
+        return os.path.exists(file_path)
 
     def get(self, image_hash: str) -> bytes or None:
         """
@@ -55,7 +58,7 @@ class ImageDataStore:
             return self._get(image_hash)
 
     def _get(self, image_hash: str) -> bytes or None:
-        if not self.has(image_hash):
+        if not self._has(image_hash):
             return None
 
         file_path = self._get_file_path(image_hash)
