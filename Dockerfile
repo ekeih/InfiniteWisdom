@@ -1,6 +1,8 @@
 FROM python:3.8-slim-buster
 
 ENV PYTHONUNBUFFERED=1
+ENV POETRY_VERSION="1.1.4"
+ENV PIP_DISABLE_PIP_VERSION_CHECK=on
 
 RUN apt-get update \
 && apt-get -y install tesseract-ocr tesseract-ocr-eng libsm6 python-opencv \
