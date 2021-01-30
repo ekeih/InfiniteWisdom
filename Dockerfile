@@ -8,9 +8,12 @@ libpq-dev
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir psycopg2
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY poetry.lock pyproject.toml ./
+RUN pip install "poetry==$POETRY_VERSION" \
+ && POETRY_VIRTUALENVS_CREATE=false poetry install \
+ && pip uninstall -y poetry \
+ && pip install --no-cache-dir psycopg2
+
 COPY . .
 
 CMD [ "python", "./infinitewisdom/main.py" ]

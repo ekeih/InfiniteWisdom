@@ -1,0 +1,48 @@
+[tool.poetry]
+name = "infinitewisdom"
+version = "4.6.9"
+description = "A telegram bot that sends inspirational quotes of infinite wisdom"
+
+license = "AGPLv3+"
+
+authors = [
+    "Max Rosin <git@hackrid.de>",
+    "Markus Ressel <mail@markusressel.de>",
+]
+
+readme = "README.md"
+
+repository = "https://github.com/ekeih/InfiniteWisdom/"
+homepage = "https://github.com/ekeih/InfiniteWisdom/"
+
+keywords = ["telegram", "bot", "infinitewisdom"]
+
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+]
+
+[build-system]
+requires = ["poetry>=1.1.4"]
+
+[tool.poetry.dependencies]
+python = "^3.8"  # Compatible python versions must be declared here
+
+container-app-conf = "^5.0.0"
+python-telegram-bot = "^12.2.0"
+telegram-click = "^3.1.3"
+requests = "*"
+prometheus-client = "*"
+google-cloud-vision = "*"
+pytesseract = "*"
+opencv-python = "*"
+sqlalchemy = "*"
+alembic = "*"
+emoji = "*"
+
+#[tool.poetry.dev-dependencies]
+#pytest = "^3.0"
+#pytest-cov = "^2.4"
