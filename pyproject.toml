@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "infinitewisdom"
-version = "4.6.12"
+version = "4.6.13"
 description = "A telegram bot that sends inspirational quotes of infinite wisdom"
 
 license = "AGPLv3+"
