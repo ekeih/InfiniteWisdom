@@ -1,7 +1,7 @@
-FROM python:3.8-slim-buster
+FROM python:3.11-slim-buster
 
 ENV PYTHONUNBUFFERED=1
-ENV POETRY_VERSION="1.2.1"
+ENV POETRY_VERSION="1.2.2"
 ENV PIP_DISABLE_PIP_VERSION_CHECK=on
 
 RUN apt-get update \
