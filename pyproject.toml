@@ -26,7 +26,7 @@ classifiers = [
 ]
 
 [build-system]
-requires = ["poetry>=1.2.1"]
+requires = ["poetry>=1.2.2"]
 
 [tool.poetry.dependencies]
 python = "^3.8"  # Compatible python versions must be declared here
