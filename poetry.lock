@@ -352,14 +352,14 @@ requests = ["requests (>=2.20.0,<3.0.0dev)"]
 
 [[package]]
 name = "google-cloud-vision"
-version = "3.5.0"
+version = "3.6.0"
 description = "Google Cloud Vision API client library"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google-cloud-vision-3.5.0.tar.gz", hash = "sha256:7703bf47c8b2108630d2a275e57f4326e3c071e666212ad9a2b3d5a8090c6767"},
-    {file = "google_cloud_vision-3.5.0-py2.py3-none-any.whl", hash = "sha256:eb83d26504d8ddaa34bc08495f2ed819ff66994bb41b6dd7e8254070a7f0a9c6"},
+    {file = "google-cloud-vision-3.6.0.tar.gz", hash = "sha256:b9a68bfc26d1e11338605534c5dfe76869f7c5288bb91a88d3fab264d2ca2774"},
+    {file = "google_cloud_vision-3.6.0-py2.py3-none-any.whl", hash = "sha256:b7d469a1423e6a69287d1e757aa0445ba4015f12aed68b588ef5687c7a474a27"},
 ]
 
 [package.dependencies]
